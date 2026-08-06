@@ -9,17 +9,17 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 - Persistence: SwiftData
 - Chart: Swift Charts (`SectorMark`) — 차트용 서드파티 금지
 - Concurrency: async/await + Actor
-- Project: Tuist **4.202.6 고정** (`.tuist-version`). 버전 임의 변경 금지
+- Project: Tuist **4.202.6 고정** (`mise.toml`). 버전 임의 변경 금지
 - Test: Swift Testing (`@Test` / `#expect`)
 - CI/CD: Jenkins + Fastlane
 
 ## Modules
 - `Projects/App` — 진입점, 커스텀 탭바, DI, `LedgerNavigation` 소유. 화면 구현 코드 금지
-- `Projects/Features/DailyLedger` — 탭 1. 일별 소비 내역
-- `Projects/Features/MonthlyCalendar` — 탭 2. 월 달력
-- `Projects/Features/Statistics` — 탭 3. 주별/월별 통계
-- `Projects/Features/Settings` — 탭 4. 설정
-- `Projects/Features/ExpenseEditor` — 추가/수정 모달. 모든 탭에서 재사용
+- `Projects/Feature/Daily` — 탭 1. 일별 소비 내역
+- `Projects/Feature/Monthly` — 탭 2. 월 달력
+- `Projects/Feature/Statistics` — 탭 3. 주별/월별 통계
+- `Projects/Feature/Settings` — 탭 4. 설정
+- `Projects/Feature/Editor` — 추가/수정 모달. 모든 탭에서 재사용
 - `Projects/Domain` — 엔티티(struct), Repository 프로토콜, UseCase, `LedgerNavigation`
 - `Projects/Core/Persistence` — SwiftData 스택, `@Model` 엔티티, Repository 구현체
 - `Projects/Core/DesignSystem` — 컬러/타이포 토큰, 공통 컴포넌트
@@ -55,9 +55,9 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 - 삭제는 soft delete 하지 않는다. 즉시 삭제 + 취소 스낵바
 
 ## Screens
-- 탭 1 DailyLedger: 상단 날짜·요일, 하단 그날 내역 리스트(금액/내용/카테고리).
+- 탭 1 Daily: 상단 날짜·요일, 하단 그날 내역 리스트(금액/내용/카테고리).
   롱프레스 드래그로 재정렬, 좌우 스와이프로 날짜 이동. 빈 날짜도 빈 상태 화면을 보여준다
-- 탭 2 MonthlyCalendar: 월 그리드, 각 날짜 셀 하단에 그날 합계(축약 표기).
+- 탭 2 Monthly: 월 그리드, 각 날짜 셀 하단에 그날 합계(축약 표기).
   날짜 탭 → 탭 1 이동, 좌우 스와이프로 월 이동, 달력 하단에 월 총액
 - 탭 3 Statistics: 세그먼트 없이 급여 주기 단위 단일 화면. 카테고리별 원형 그래프,
   총액, 일평균, 최다 사용 카테고리, 직전 주기 대비 증감. 주기 안의 주차별 막대 그래프를 함께 보여준다.
@@ -81,13 +81,14 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 - 베타 배포: `bundle exec fastlane beta`
 
 ## Git
-- `main`: 항상 배포 가능 상태. 직접 푸시 금지, PR로만 반영
+- `main`: 항상 배포 가능 상태. 릴리스와 핫픽스만 반영한다. 직접 푸시 금지
+- `dev`: 통합 브랜치. 모든 기능 작업이 여기로 모인다. 직접 푸시 금지, PR로만 반영
 - 작업 브랜치: `feat/`, `fix/`, `refactor/`, `chore/` + 영문 케밥 케이스 (예: `feat/monthly-calendar`)
-- main에서 분기 → PR → Squash merge → 브랜치 삭제
-- 심사 제출 시 `release/x.y.z` 분기. 승인 후 `vX.Y.Z` 태그를 찍고 main에 머지
-- 긴급 수정은 `release/x.y.z`에서 `hotfix/` 분기, main에도 반드시 역머지
+- `dev`에서 분기 → `dev`로 PR → Squash merge → 브랜치 삭제
+- 심사 제출 시 `dev`에서 `release/x.y.z` 분기. 승인 후 `vX.Y.Z` 태그를 찍고 `main`과 `dev`에 모두 머지
+- 긴급 수정은 `main`에서 `hotfix/` 분기 → `main`에 머지 후 태그, `dev`에도 반드시 역머지
 - 커밋 메시지: Conventional Commits. 제목은 영문, 본문은 한국어 허용
-- Jenkins: PR 이벤트 → `tuist test` + `swiftlint --strict`, `v*` 태그 → `fastlane beta`
+- Jenkins: `dev`/`main` 대상 PR 이벤트 → `tuist test` + `swiftlint --strict`, `v*` 태그 → `fastlane beta`
 
 ## Conventions
 - 상태 관리는 `@Observable` + `@State` 조합
@@ -118,7 +119,7 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 - Do not add comments unless the logic is non-obvious
 - Do not add landscape or iPad layout code
 - Do not hardcode secrets — use `.xcconfig` / environment variables
-- Do not commit directly to `main`, and do not push or create tags without explicit instruction
+- Do not commit directly to `main` or `dev`, and do not push or create tags without explicit instruction    
 
 ## References
 - 모듈 정의 헬퍼: `Tuist/ProjectDescriptionHelpers/Module.swift`

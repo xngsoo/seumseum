@@ -1,0 +1,11 @@
+# Tuist가 생성하는 것들 — 절대 커밋하지 않는다
+*.xcodeproj
+*.xcworkspace
+Derived/
+.build/
+Tuist/.build/
+
+# Xcode 사용자별 파일
+xcuserdata/
+*.xcuserstate
+.DS_Store
