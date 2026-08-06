@@ -86,7 +86,8 @@ public extension Project {
             deploymentTargets: AppEnvironment.deploymentTargets,
             infoPlist: .default,
             sources: ["Tests/**"],
-            dependencies: [.target(name: name)]
+            dependencies: [.target(name: name)],
+            settings: .settings(base: ["ENABLE_TESTING_SEARCH_PATH": "YES"])
         ) : nil
         
         // 3. 조립
