@@ -1,0 +1,100 @@
+import ProjectDescription
+
+// 프로젝트 전역 상수
+public enum AppEnvironment {
+    public static let appName = "Seumseum"
+    public static let organizationName = "xngsoo"
+    public static let bundlePrefix = "com.xngsoo.seumseum"
+    public static let destinations: Destinations = [.iPhone]
+    public static let deploymentTargets: DeploymentTargets = .iOS("17.0")
+}
+
+// 공통 빌드 세팅
+public let baseSettings: SettingsDictionary = [
+    "SWIFT_VERSION": "6.0",
+    "SWIFT_STRICT_CONCURRENCY": "complete"
+]
+
+// 의존성
+public extension TargetDependency {
+    static let domain = TargetDependency.project(
+        target: "Domain",
+        path: .relativeToRoot("Projects/Domain")
+    )
+    static let shared = TargetDependency.project(
+        target: "Shared",
+        path: .relativeToRoot("Projects/Core/Shared")
+    )
+    static let designSystem = TargetDependency.project(
+        target: "DesignSystem",
+        path: .relativeToRoot("Projects/Core/DesignSystem")
+    )
+    static let persistence = TargetDependency.project(
+        target: "Persistence",
+        path: .relativeToRoot("Projects/Core/Persistence")
+    )
+    static let daily = TargetDependency.project(
+        target: "Daily",
+        path: .relativeToRoot("Projects/Feature/Daily")
+    )
+    static let monthly = TargetDependency.project(
+        target: "Monthly",
+        path: .relativeToRoot("Projects/Feature/Monthly")
+    )
+    static let statistics = TargetDependency.project(
+        target: "Statistics",
+        path: .relativeToRoot("Projects/Feature/Statistics")
+    )
+    static let settings = TargetDependency.project(
+        target: "Settings",
+        path: .relativeToRoot("Projects/Feature/Settings")
+    )
+    static let editor = TargetDependency.project(
+        target: "Editor",
+        path: .relativeToRoot("Projects/Feature/Editor")
+    )
+}
+
+// 모듈 조립
+public extension Project {
+    static func module(
+        name: String,
+        product: Product = .staticFramework,
+        dependencies: [TargetDependency] = [],
+        hasResources: Bool = false,
+        hasTests: Bool = true
+    ) -> Project {
+        // 1. 소스 타겟
+        let sourceTarget: Target = .target(
+            name: name,
+            destinations: AppEnvironment.destinations,
+            product: product,
+            bundleId: "\(AppEnvironment.bundlePrefix).\(name)",
+            deploymentTargets: AppEnvironment.deploymentTargets,
+            infoPlist: .default,
+            sources: ["Sources/**"],
+            resources: hasResources ? ["Resources/**"] : nil,
+            dependencies: dependencies
+        )
+        
+        // 2. 테스트 타겟
+        let testTarget: Target? = hasTests ? .target(
+            name: "\(name)Tests",
+            destinations: AppEnvironment.destinations,
+            product: .unitTests,
+            bundleId: "\(AppEnvironment.bundlePrefix).\(name)Tests",
+            deploymentTargets: AppEnvironment.deploymentTargets,
+            infoPlist: .default,
+            sources: ["Tests/**"],
+            dependencies: [.target(name: name)]
+        ) : nil
+        
+        // 3. 조립
+        return Project(
+            name: name,
+            organizationName: AppEnvironment.organizationName,
+            settings: .settings(base: baseSettings),
+            targets: [sourceTarget, testTarget].compactMap{ $0 }
+        )
+    }
+}
