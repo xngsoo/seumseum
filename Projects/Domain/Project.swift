@@ -1,4 +1,7 @@
 import ProjectDescription
 import ProjectDescriptionHelpers
 
-let project = Project.module(name: "Domain")
+let project = Project.module(
+    name: "Domain",
+    dependencies: [.shared]
+)
