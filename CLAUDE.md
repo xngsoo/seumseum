@@ -62,6 +62,11 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 - 지급일 보정 규칙은 설정값을 따른다: `.previousBusinessDay`(기본) / `.nextBusinessDay` / `.none`
 - 보정 판정은 주말(토·일)만 본다. 공휴일 판정은 v1 범위 밖 — 사용자가 주기 시작일을 직접 조정
 - 급여일로 29~31일을 고른 달에 해당 일자가 없으면 그 달의 마지막 날로 보정한 뒤 주말 규칙을 적용한다
+- 보정 결과는 달을 넘어갈 수 있다 (2/28 토 + `.nextBusinessDay` → 3/2). 따라서 "그 달의 지급일"로
+  주기를 판정하면 안 되고, 앞뒤 달의 지급일을 함께 계산해 시간순으로 구간을 정한다
+- 주기 계산은 `PayPeriodCalculator.period(containing:setting:)` 하나로만 한다.
+  설정은 `PayPeriodSetting`(`.calendarMonth` / `.payday(dayOfMonth:adjustment:)`)
+- 주기는 반개구간 `[start, end)`. 화면에 쓰는 마지막 날은 `PayPeriod.lastDay` (`7/25 – 8/24`)
 - 삭제는 soft delete 하지 않는다. 즉시 삭제 + 취소 스낵바
 
 ## Screens

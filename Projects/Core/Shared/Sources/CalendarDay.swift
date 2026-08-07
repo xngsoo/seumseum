@@ -49,3 +49,30 @@ public enum CalendarDay {
         return interval.start ..< interval.end
     }
 }
+
+public extension CalendarDay {
+    static func date(year: Int, month: Int, day: Int) -> Date? {
+        return calendar.date(from: DateComponents(year: year, month: month, day: day))
+    }
+    
+    static func startOfMonth(containing day: Date) -> Date {
+        return monthRange(containing: day).lowerBound
+    }
+    
+    static func adding(months: Int, to day: Date) -> Date {
+        return calendar.date(byAdding: .month, value: months, to: day) ?? day
+    }
+    
+    static func daysInMonth(year: Int, month: Int) -> Int? {
+        guard let first = date(year: year, month: month, day: 1),
+              let range = calendar.range(of: .day, in: .month, for: first)
+        else { return nil }
+        return range.count
+    }
+    
+    /// 토, 일 여부 확인
+    static func isWeekend(_ day: Date) -> Bool {
+        let weekday = calendar.component(.weekday, from: day)
+        return weekday == 1 || weekday == 7
+    }
+}

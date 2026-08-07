@@ -19,7 +19,7 @@ struct CalendarDayTests {
         return try #require(calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour)))
     }
     
-    private func toYMD(_ day: Date) -> String {
+    private func ymd(_ day: Date) -> String {
         let calendar = CalendarDay.components(of: day)
         return String(format: "%04d-%02d-%02d", calendar.year ?? 0, calendar.month ?? 0, calendar.day ?? 0)
     }
@@ -29,21 +29,21 @@ struct CalendarDayTests {
         let seoul = try #require(TimeZone(identifier: "Asia/Seoul"))
         let recorded = try instant(2026, 8, 6, 10, in: "Asia/Seoul")
         let stored = CalendarDay.normalized(recorded, in: seoul)
-        #expect(toYMD(stored) == "2026-08-06")
+        #expect(ymd(stored) == "2026-08-06")
     }
     
     @Test("자정 직후 기록도 로컬 달력일을 따른다")
     func afterMidnight() throws {
         let seoul = try #require(TimeZone(identifier: "Asia/Seoul"))
         let recorded = try instant(2026, 8, 7, 0, in: "Asia/Seoul")
-        #expect(toYMD(CalendarDay.normalized(recorded, in: seoul)) == "2026-08-07")
+        #expect(ymd(CalendarDay.normalized(recorded, in: seoul)) == "2026-08-07")
     }
     
     @Test("UTC 음수 오프셋 지역도 로컬 달력일을 따른다")
     func negativeOffsetZone() throws {
         let newYork = try #require(TimeZone(identifier: "America/New_York"))
         let recorded = try instant(2026, 8, 6, 23, in: "America/New_York")
-        #expect(toYMD(CalendarDay.normalized(recorded, in: newYork)) == "2026-08-06")
+        #expect(ymd(CalendarDay.normalized(recorded, in: newYork)) == "2026-08-06")
     }
     
     @Test("정규화 결과는 UTC 자정")
@@ -66,8 +66,8 @@ struct CalendarDayTests {
     func addingDays() throws {
         let seoul = try #require(TimeZone(identifier: "Asia/Seoul"))
         let day = CalendarDay.normalized(try instant(2026, 8, 31, 12, in: "Asia/Seoul"), in: seoul)
-        #expect(toYMD(CalendarDay.adding(days: 1, to: day)) == "2026-09-01")
-        #expect(toYMD(CalendarDay.adding(days: -1, to: day)) == "2026-08-30")
+        #expect(ymd(CalendarDay.adding(days: 1, to: day)) == "2026-09-01")
+        #expect(ymd(CalendarDay.adding(days: -1, to: day)) == "2026-08-30")
     }
     
     @Test("월 범위는 1일부터 다음 달 1일 직전")
@@ -75,8 +75,8 @@ struct CalendarDayTests {
         let seoul = try #require(TimeZone(identifier: "Asia/Seoul"))
         let day = CalendarDay.normalized(try instant(2026, 8, 15, 12, in: "Asia/Seoul"), in: seoul)
         let range = CalendarDay.monthRange(containing: day)
-        #expect(toYMD(range.lowerBound) == "2026-08-01")
-        #expect(toYMD(range.upperBound) == "2026-09-01")
+        #expect(ymd(range.lowerBound) == "2026-08-01")
+        #expect(ymd(range.upperBound) == "2026-09-01")
         #expect(range.contains(day))
     }
 }
