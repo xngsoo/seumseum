@@ -1,5 +1,5 @@
 //
-//  Category.swift
+//  ExpenseCategory.swift
 //  Domain
 //
 //  Created by SEUNGSOO HAN on 8/6/26.
@@ -8,7 +8,7 @@
 
 import Foundation
 
-public struct Category: Identifiable, Hashable, Sendable {
+public struct ExpenseCategory: Identifiable, Hashable, Sendable {
     public let id: UUID
     public var name: String
     public var symbolName: String

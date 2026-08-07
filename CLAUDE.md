@@ -39,7 +39,7 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 
 ## Domain Rules
 - `Expense`: `id`, `amount: Decimal`, `memo: String`, `categoryID`, `date: Date`, `createdAt`, `sortOrder: Int`
-- `Category`: `id`, `name`, `symbolName`, `colorToken`, `sortOrder`, `isBuiltIn`
+- `ExpenseCategory`: `id`, `name`, `symbolName`, `colorToken`, `sortOrder`, `isBuiltIn`
 - `Expense.date`는 달력일만 뜻한다. 기록 시점의 **로컬** 달력일(y/m/d)을 뽑아 **UTC 자정**으로 저장하고,
   읽기·비교·표시는 항상 UTC 고정 달력으로 한다. 시간대가 바뀌어도 날짜가 밀리지 않게 하기 위함이다
 - 원시 `Date`를 화면에 직접 넘기지 않는다. 표시용 문자열/`DateComponents`는 `Shared`의 날짜 유틸이 만든다
