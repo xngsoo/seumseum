@@ -79,5 +79,27 @@ struct CalendarDayTests {
         #expect(ymd(range.upperBound) == "2026-09-01")
         #expect(range.contains(day))
     }
+    
+    @Test("월 이동은 없는 날짜를 그 달 마지막 날로 맞춘다")
+    func addingMonthsClamps() throws {
+        let day = try #require(CalendarDay.date(year: 2026, month: 8, day: 31))
+        let next = CalendarDay.adding(months: 1, to: day)
+        #expect(CalendarDay.components(of: next).day == 30)   // 9월은 30일까지
+    }
+
+    @Test("주말 판정은 토·일만")
+    func weekend() throws {
+        // 2026-07-25 토, 26 일, 27 월
+        #expect(CalendarDay.isWeekend(try #require(CalendarDay.date(year: 2026, month: 7, day: 25))))
+        #expect(CalendarDay.isWeekend(try #require(CalendarDay.date(year: 2026, month: 7, day: 26))))
+        #expect(!CalendarDay.isWeekend(try #require(CalendarDay.date(year: 2026, month: 7, day: 27))))
+    }
+
+    @Test("평년·윤년 2월 일수")
+    func daysInFebruary() {
+        #expect(CalendarDay.daysInMonth(year: 2026, month: 2) == 28)
+        #expect(CalendarDay.daysInMonth(year: 2028, month: 2) == 29)
+        #expect(CalendarDay.daysInMonth(year: 2100, month: 2) == 28)   // 100년 예외
+    }
 }
 
