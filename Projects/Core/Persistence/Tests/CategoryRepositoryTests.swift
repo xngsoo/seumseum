@@ -31,7 +31,7 @@ struct CategoryRepositoryTests {
     @Test("사용 중인 카테고리는 삭제할 수 없다")
     func inUseNotDeletable() async throws {
         let stack = try await makeStack()
-        let custom = ExpenseCategory(name: "여행", symbolName: "airplane", colorToken: "blue")
+        let custom = ExpenseCategory(name: "여행", symbolName: "airplane", colorToken: .blue)
         try await stack.categories.insert(custom, at: 0)
 
         try await stack.expenses.insert(
@@ -46,7 +46,7 @@ struct CategoryRepositoryTests {
     @Test("사용하지 않는 사용자 카테고리는 삭제되고 순서가 다시 매겨진다")
     func deleteCustom() async throws {
         let repository = try await makeStack().categories
-        let custom = ExpenseCategory(name: "여행", symbolName: "airplane", colorToken: "blue")
+        let custom = ExpenseCategory(name: "여행", symbolName: "airplane", colorToken: .blue)
         try await repository.insert(custom, at: 0)
         #expect(try await repository.categories().first?.name == "여행")
 

@@ -7,16 +7,17 @@
 //
 
 import Foundation
+import Shared
 
 public struct ExpenseCategory: Identifiable, Hashable, Sendable {
     public let id: UUID
     public var name: String
     public var symbolName: String
-    public var colorToken: String
+    public var colorToken: ColorToken
     public var sortOrder: Int
     public let isBuiltIn: Bool
     
-    public init(id: UUID = UUID(), name: String, symbolName: String, colorToken: String, sortOrder: Int = 0, isBuiltIn: Bool = false) {
+    public init(id: UUID = UUID(), name: String, symbolName: String, colorToken: ColorToken, sortOrder: Int = 0, isBuiltIn: Bool = false) {
         self.id = id
         self.name = name
         self.symbolName = symbolName

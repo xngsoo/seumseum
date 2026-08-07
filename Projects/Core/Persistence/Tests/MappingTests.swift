@@ -33,7 +33,7 @@ struct MappingTests {
     func categoryRoundTrip() {
         let original = ExpenseCategory(
             name: "식비", symbolName: "fork.knife",
-            colorToken: "orange", sortOrder: 2, isBuiltIn: true
+            colorToken: .orange, sortOrder: 2, isBuiltIn: true
         )
         #expect(CategoryRecord(original).domain == original)
     }
