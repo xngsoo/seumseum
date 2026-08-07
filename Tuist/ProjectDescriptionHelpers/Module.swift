@@ -87,7 +87,7 @@ public extension Project {
             infoPlist: .default,
             sources: ["Tests/**"],
             dependencies: [.target(name: name)],
-            settings: .settings(base: ["ENABLE_TESTING_SEARCH_PATH": "YES"])
+            settings: .settings(base: ["ENABLE_TESTING_SEARCH_PATHS": "YES"])
         ) : nil
         
         // 3. 조립

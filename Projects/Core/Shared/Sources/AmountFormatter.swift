@@ -35,7 +35,7 @@ public enum AmountFormatter {
         .precision(.fractionLength(0))
         .locale(locale)
     
-    /// 크기를 판정한 뒤 환산
+    /// 금액을 판정한 뒤 변환
     private static func scaled(_ amount: Decimal)
     -> (value: Decimal, unit: String) {
         switch amount {

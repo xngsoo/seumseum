@@ -14,24 +14,25 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 - CI/CD: Jenkins + Fastlane
 
 ## Modules
-- `Projects/App` — 진입점, 커스텀 탭바, DI, `LedgerNavigation` 소유. 화면 구현 코드 금지
+- `Projects/App` — 진입점, 커스텀 탭바, DI, `AppNavigation` 소유. 화면 구현 코드 금지
 - `Projects/Feature/Daily` — 탭 1. 일별 소비 내역
 - `Projects/Feature/Monthly` — 탭 2. 월 달력
 - `Projects/Feature/Statistics` — 탭 3. 주별/월별 통계
 - `Projects/Feature/Settings` — 탭 4. 설정
 - `Projects/Feature/Editor` — 추가/수정 모달. 모든 탭에서 재사용
-- `Projects/Domain` — 엔티티(struct), Repository 프로토콜, UseCase, `LedgerNavigation`
+- `Projects/Domain` — 엔티티(struct), Repository 프로토콜, UseCase, `AppNavigation`
 - `Projects/Core/Persistence` — SwiftData 스택, `@Model` 엔티티, Repository 구현체
 - `Projects/Core/DesignSystem` — 컬러/타이포 토큰, 공통 컴포넌트
 - `Projects/Core/Shared` — `AmountFormatter`, 날짜 유틸, 확장
 
 ## Architecture
 - 의존 방향: `App → Features → Domain`, `App → Persistence → Domain`. 역방향 의존 금지
+- `Core/Shared`는 최하위 계층. 모든 모듈이 의존할 수 있고, 어떤 모듈에도 의존하지 않는다 (Foundation만)
 - Feature 모듈끼리 직접 의존 금지 — 필요하면 Domain의 프로토콜/상태를 경유
-- Domain은 SwiftUI/SwiftData를 import하지 않는다 (Foundation만)
+- Domain은 SwiftUI/SwiftData를 import하지 않는다 (Foundation + Observation만)
 - `@Model` 타입은 Persistence 밖으로 나가지 않는다. 경계에서 Domain struct로 매핑
-- 탭 간 연동은 `@Observable LedgerNavigation`(selectedTab, selectedDate) 하나로만 한다.
-  탭 2에서 날짜 탭 → `LedgerNavigation`의 두 값을 갱신 → 탭 1이 반응. 직접 호출 금지
+- 탭 간 연동은 `@Observable AppNavigation`(selectedTab, selectedDate) 하나로만 한다.
+  탭 2에서 날짜 탭 → `AppNavigation`의 두 값을 갱신 → 탭 1이 반응. 직접 호출 금지
 - 화면 단위 MVVM: View는 렌더링만, 상태와 로직은 `@Observable` ViewModel
 - ViewModel은 Repository 프로토콜에만 의존, 구현체는 App 레이어에서 주입
 - 탭바는 `TabView` 기본 탭바가 아니라 커스텀 탭바 오버레이 (중앙 추가 버튼이 탭이 아닌 액션이므로)
@@ -39,8 +40,17 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 ## Domain Rules
 - `Expense`: `id`, `amount: Decimal`, `memo: String`, `categoryID`, `date: Date`, `createdAt`, `sortOrder: Int`
 - `Category`: `id`, `name`, `symbolName`, `colorToken`, `sortOrder`, `isBuiltIn`
-- 정렬: 같은 날짜 안에서 `sortOrder` 오름차순. 신규 항목은 그 날짜의 최소 `sortOrder - 1`을 받아 맨 위에 온다
-- 드래그 재정렬 시 해당 날짜의 항목만 `sortOrder`를 0부터 재부여한다
+- `Expense.date`는 달력일만 뜻한다. 기록 시점의 **로컬** 달력일(y/m/d)을 뽑아 **UTC 자정**으로 저장하고,
+  읽기·비교·표시는 항상 UTC 고정 달력으로 한다. 시간대가 바뀌어도 날짜가 밀리지 않게 하기 위함이다
+- 원시 `Date`를 화면에 직접 넘기지 않는다. 표시용 문자열/`DateComponents`는 `Shared`의 날짜 유틸이 만든다
+- 시각 정보가 필요하면 `createdAt`을 쓴다 (`date`에는 시각이 없다)
+- 정렬: 같은 날짜 안에서 `sortOrder` 오름차순. 조회는 정렬된 상태로 반환한다
+- 불변식: 한 날짜의 항목은 항상 `sortOrder`가 0…n-1. 추가·삭제·재정렬 모두 이 상태를 유지한다
+- 신규 항목은 0번에 삽입해 맨 위에 온다. 삭제 취소는 원래 인덱스로 되돌린다
+- 순서 변경은 바뀐 순서의 ID 배열만 넘긴다. `sortOrder` 값 계산은 저장소가 하고,
+  호출부는 숫자를 만들지 않는다. `Expense.sortOrder`를 채워 넘겨도 저장소가 다시 매긴다
+- `ExpenseRepository`: `insert(_:at:)`, `delete(id:) -> Int`, `reorder(_ orderedIDs:on:)`.
+  `CategoryRepository`는 전역 목록이라 날짜 인자가 없다 (`reorder(_ orderedIDs:)`)
 - 금액 축약 표기(`AmountFormatter.short`):
   - 10,000 미만 → 그대로 (`9800원`)
   - 10,000 이상 → 만 단위 소수 1자리 버림, 소수부가 0이면 생략 (`10만원`, `11.3만원`, `153.5만원`)

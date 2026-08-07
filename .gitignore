@@ -4,6 +4,7 @@
 Derived/
 .build/
 Tuist/.build/
+graph.png
 
 # Xcode 사용자별 파일
 xcuserdata/
