@@ -8,6 +8,7 @@
 
 import Foundation
 import Domain
+import Shared
 
 extension CategoryRecord {
     convenience init(_ category: ExpenseCategory) {
@@ -15,7 +16,7 @@ extension CategoryRecord {
             id: category.id,
             name: category.name,
             symbolName: category.symbolName,
-            colorToken: category.colorToken,
+            colorToken: category.colorToken.rawValue,
             sortOrder: category.sortOrder,
             isBuiltIn: category.isBuiltIn
         )
@@ -26,7 +27,7 @@ extension CategoryRecord {
             id: id,
             name: name,
             symbolName: symbolName,
-            colorToken: colorToken,
+            colorToken: ColorToken(rawValue: colorToken) ?? .gray,
             sortOrder: sortOrder,
             isBuiltIn: isBuiltIn
         )
@@ -36,6 +37,6 @@ extension CategoryRecord {
     func apply(_ category: ExpenseCategory) {
         name = category.name
         symbolName = category.symbolName
-        colorToken = category.colorToken
+        colorToken = category.colorToken.rawValue
     }
 }
