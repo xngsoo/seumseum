@@ -5,6 +5,7 @@ import Domain
 import Persistence
 import Daily
 import Editor
+import Statistics
 
 struct MainTabView: View {
     let stack: PersistenceStack
@@ -45,7 +46,11 @@ struct MainTabView: View {
         case .monthly:
             MonthlyView(expenseRepository: stack.expenses)
         case .statistics:
-            PlaceholderScreen(title: "통계", detail: "탭 3 — 급여 주기별 분석")
+            StatisticsView(
+                expenseRepository: stack.expenses,
+                categoryRepository: stack.categories,
+                settingsRepository: stack.settings
+            )
         case .settings:
             PlaceholderScreen(title: "설정", detail: "탭 4 — 카테고리·급여일")
         }
