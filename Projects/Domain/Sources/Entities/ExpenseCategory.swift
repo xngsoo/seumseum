@@ -10,6 +10,9 @@ import Foundation
 import Shared
 
 public struct ExpenseCategory: Identifiable, Hashable, Sendable {
+    
+    public static let maxCount = 12
+    
     public let id: UUID
     public var name: String
     public var symbolName: String

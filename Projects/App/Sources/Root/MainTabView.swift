@@ -3,12 +3,12 @@ import DesignSystem
 import Domain
 import Persistence
 import Daily
+import Editor
 
 struct MainTabView: View {
     let stack: PersistenceStack
 
     @Environment(AppNavigation.self) private var navigation
-    @State private var isEditorPresented = false
 
     var body: some View {
         @Bindable var navigation = navigation
@@ -19,12 +19,17 @@ struct MainTabView: View {
                 .padding(.bottom, AppSpacing.tabBarHeight)
 
             AppTabBar(selection: $navigation.selectedTab) {
-                isEditorPresented = true
+                navigation.presentCreateEditor()
             }
         }
         .background(AppColor.background)
-        .sheet(isPresented: $isEditorPresented) {
-            PlaceholderScreen(title: "지출 추가", detail: "5단계에서는 자리만 잡습니다")
+        .sheet(item: $navigation.editorRoute) { route in
+            ExpenseEditorView(
+                route: route,
+                expenseRepository: stack.expenses,
+                categoryRepository: stack.categories,
+                onSaved: { navigation.dataDidChange() }
+            )
         }
     }
 

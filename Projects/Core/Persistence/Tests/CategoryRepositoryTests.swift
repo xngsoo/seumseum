@@ -81,3 +81,27 @@ struct CategoryRepositoryTests {
         #expect(result.map(\.sortOrder) == Array(0 ..< result.count))
     }
 }
+
+@Suite("카테고리 개수 제한")
+struct CategoryLimitTests {
+
+    @Test("최대 개수를 넘겨 추가하면 categoryLimitReached")
+    func limit() async throws {
+        let repository = try await PersistenceStack(inMemory: true).categories
+        let seeded = try await repository.categories().count
+
+        for index in seeded ..< ExpenseCategory.maxCount {
+            try await repository.insert(
+                ExpenseCategory(name: "추가\(index)", symbolName: "star", colorToken: .gray),
+                at: index
+            )
+        }
+        #expect(try await repository.categories().count == ExpenseCategory.maxCount)
+
+        await #expect(throws: DomainError.categoryLimitReached(max: ExpenseCategory.maxCount)) {
+            try await repository.insert(
+                ExpenseCategory(name: "초과", symbolName: "star", colorToken: .gray), at: 0
+            )
+        }
+    }
+}

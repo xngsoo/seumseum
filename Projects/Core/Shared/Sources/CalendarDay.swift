@@ -51,6 +51,10 @@ public enum CalendarDay {
 }
 
 public extension CalendarDay {
+    
+    /// 화면 표기에 사용하는 Locale
+    static let locale = Locale(identifier: "ko_KR")
+    
     static func date(year: Int, month: Int, day: Int) -> Date? {
         return calendar.date(from: DateComponents(year: year, month: month, day: day))
     }

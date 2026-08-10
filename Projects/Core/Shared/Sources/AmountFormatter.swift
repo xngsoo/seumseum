@@ -21,6 +21,11 @@ public enum AmountFormatter {
         return fullStyle.format(amount) + "원"
     }
     
+    /// 단위를 따로 표시하는 입력 필드
+    public static func grouped(_ amount: Decimal) -> String {
+        fullStyle.format(amount)
+    }
+    
     // MARK: - Private
     
     private static let locale = Locale(identifier: "ko_KR")

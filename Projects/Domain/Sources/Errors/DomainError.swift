@@ -12,6 +12,7 @@ public enum DomainError: Error, Equatable, Sendable {
     case expenseNotFound(UUID)
     case categoryNotFound(UUID)
     case categoryInUse(UUID)
+    case categoryLimitReached(max: Int)
     case builtInCategoryNotDeletable(UUID)
     case invalidAmount(Decimal)
     case invalidIndex(Int)
@@ -28,6 +29,8 @@ extension DomainError: LocalizedError {
         case .invalidAmount: "금액은 0보다 커야 합니다."
         case .invalidIndex: "잘못된 위치입니다."
         case .storageFailed: "저장소에 접근하지 못했습니다."
+        case .categoryLimitReached(max: let max):
+            "카테고리는 최대 \(max)개까지 만들 수 있습니다."
         }
     }
 }

@@ -33,7 +33,7 @@ public struct DailyView: View {
         .background(AppColor.background)
         .overlay(alignment: .bottom) { undoBar }
         .animation(.snappy, value: viewModel.pendingUndo)
-        .task(id: navigation.selectedDate) {
+        .task(id: LoadKey(day: navigation.selectedDate, version: navigation.dataVersion)) {
             await viewModel.load(day: navigation.selectedDate)
         }
     }
@@ -47,9 +47,14 @@ public struct DailyView: View {
                 ForEach(viewModel.expenses) { expense in
                     ExpenseRow(expense: expense, category: viewModel.category(for: expense))
                         .listRowBackground(AppColor.surface)
+                        .contentShape(Rectangle())
+                        .onTapGesture { navigation.presentEditor(for: expense) }
                         .swipeActions(edge: .trailing) {
                             Button("삭제", role: .destructive) {
-                                Task { await viewModel.delete(expense) }
+                                Task {
+                                    await viewModel.delete(expense)
+                                    navigation.dataDidChange()
+                                }
                             }
                         }
                 }
@@ -76,5 +81,10 @@ public struct DailyView: View {
 
     private func step(_ days: Int) {
         navigation.selectedDate = CalendarDay.adding(days: days, to: navigation.selectedDate)
+    }
+    
+    private struct LoadKey: Hashable {
+        let day: Date
+        let version: Int
     }
 }

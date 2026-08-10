@@ -15,6 +15,9 @@ actor SwiftDataCategoryRepository: CategoryRepository {
 
     func insert(_ category: ExpenseCategory, at index: Int) throws {
         var siblings = try allRecords()
+        guard siblings.count < ExpenseCategory.maxCount else {
+            throw DomainError.categoryLimitReached(max: ExpenseCategory.maxCount)
+        }
         let record = CategoryRecord(category)
         modelContext.insert(record)
         siblings.insert(record, at: min(max(index, 0), siblings.count))
