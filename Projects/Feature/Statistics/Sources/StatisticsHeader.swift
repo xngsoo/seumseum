@@ -9,14 +9,15 @@ struct StatisticsHeader: View {
     let onNext: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.xs) {
+        VStack(alignment: .center, spacing: AppSpacing.xs) {
             HStack(spacing: AppSpacing.sm) {
                 stepButton(systemImage: "chevron.left", label: "이전 주기", action: onPrevious)
+                Spacer()
                 Text(periodText)
                     .font(AppFont.screenTitle)
                     .foregroundStyle(AppColor.textPrimary)
-                stepButton(systemImage: "chevron.right", label: "다음 주기", action: onNext)
                 Spacer()
+                stepButton(systemImage: "chevron.right", label: "다음 주기", action: onNext)
             }
             Text(AmountFormatter.full(total))
                 .font(AppFont.amountLarge)
