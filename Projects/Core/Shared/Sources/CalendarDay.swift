@@ -137,3 +137,17 @@ public extension CalendarDay {
         return formatter
     }()
 }
+
+public extension CalendarDay {
+    
+    /// 반개구간에 들어있는 달력일 수
+    static func dayCount(in range: Range<Date>) -> Int {
+        return calendar.dateComponents([.day], from: range.lowerBound, to: range.upperBound).day ?? 0
+    }
+    
+    /// 기간 표기에 쓰는 짧은 날짜. '7/25'
+    static func shortText(_ day: Date) -> String {
+        let parts = components(of: day)
+        return "\(parts.month ?? 0)/\(parts.day ?? 0)"
+    }
+}

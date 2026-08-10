@@ -16,6 +16,8 @@ public enum SampleData {
 
         let today = CalendarDay.today()
         let yesterday = CalendarDay.adding(days: -1, to: today)
+        let earlier = CalendarDay.adding(days: -12, to: today)
+        let lastMonth = CalendarDay.adding(days: -34, to: today)
         let categories = try await stack.categories.categories()
         guard !categories.isEmpty else { return }
 
@@ -30,6 +32,15 @@ public enum SampleData {
             (yesterday, [
                 ("편의점", 3_200, 4),
                 ("택시", 12_800, 2),
+            ]),
+            (earlier, [
+                ("병원", 28_000, 5),
+                ("책", 18_500, 6),
+                ("주유", 60_000, 2),
+            ]),
+            (lastMonth, [
+                ("지난달 외식", 52_000, 0),
+                ("지난달 쇼핑", 88_000, 3),
             ]),
         ]
 
