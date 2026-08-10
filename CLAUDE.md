@@ -62,15 +62,24 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 - 급여 주기(`PayPeriod`)는 통계에서만 쓴다. 탭 1·2는 항상 달력 기준 (일 / 1일~말일)
 - 급여일 설정이 꺼져 있으면(기본) 주기 = 달력상의 월
 - 급여일이 켜져 있으면 주기 = `해당 월 지급일 ~ 다음 달 지급일 전날`
-- 지급일 보정 규칙은 설정값을 따른다: `.previousBusinessDay`(기본) / `.nextBusinessDay` / `.none`
+- 지급일 보정 규칙은 설정값을 따른다: `.prevBusinessDay`(기본) / `.nextBusinessDay` / `.none`
 - 보정 판정은 주말(토·일)만 본다. 공휴일 판정은 v1 범위 밖 — 사용자가 주기 시작일을 직접 조정
-- 급여일로 29~31일을 고른 달에 해당 일자가 없으면 그 달의 마지막 날로 보정한 뒤 주말 규칙을 적용한다
+- 급여일은 1~31일 또는 말일 중에서 고른다 (`PaydayDay.day(n)` / `.lastDay`).
+  `.day(31)`은 "31일, 없으면 그 달 마지막 날로 보정", `.lastDay`는 "언제나 그 달 마지막 날"로 뜻이 다르다.
+  화면에 "31일"로 적힌 값이 2월에 28일이 되는 혼동을 없애기 위해 타입에서 구분한다
+- 일자 결정은 `PaydayDay.resolved(daysInMonth:)`가 하고, 그 뒤에 주말 규칙을 적용한다
 - 보정 결과는 달을 넘어갈 수 있다 (2/28 토 + `.nextBusinessDay` → 3/2). 따라서 "그 달의 지급일"로
   주기를 판정하면 안 되고, 앞뒤 달의 지급일을 함께 계산해 시간순으로 구간을 정한다
 - 주기 계산은 `PayPeriodCalculator.period(containing:setting:)` 하나로만 한다.
-  설정은 `PayPeriodSetting`(`.calendarMonth` / `.payday(dayOfMonth:adjustment:)`)
+  설정은 `PayPeriodSetting`(`.calendarMonth` / `.payday(day:adjustment:)`)
 - 주기는 반개구간 `[start, end)`. 화면에 쓰는 마지막 날은 `PayPeriod.lastDay` (`7/25 – 8/24`)
 - 삭제는 soft delete 하지 않는다. 즉시 삭제 + 취소 스낵바
+- 정액 품목 분리(`SplitItem`): 이름·개당 금액·수량 단위·대상 카테고리를 설정에 둔다.
+  추가 화면에서 수량을 넣으면 그만큼을 대상 카테고리로 떼고 나머지를 원래 카테고리에 남긴다.
+  분리 후에도 두 건의 합은 원래 금액과 같아야 한다
+- 분리 금액이 총액을 넘으면 저장할 수 없고, 나머지가 0이면 분리분만 기록한다.
+  수정 화면에서는 노출하지 않는다 (이미 나뉜 기록을 또 나누면 모호해진다)
+- `AppSettings`는 한 덩어리로 저장한다. 일부만 바꿔 저장하면 넘기지 않은 필드가 초기화된다
 
 ## Screens
 - 탭 1 Daily: 상단 날짜·요일, 하단 그날 내역 리스트(금액/내용/카테고리).
