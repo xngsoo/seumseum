@@ -16,7 +16,8 @@ struct ExpenseEditorViewModelTests {
         let viewModel = ExpenseEditorViewModel(
             route: route,
             expenseRepository: repository,
-            categoryRepository: FixedCategoryRepository(categories: [category])
+            categoryRepository: FixedCategoryRepository(categories: [category]),
+            settingsRepository: FixedSettingsRepository()
         )
         return (viewModel, repository)
     }
@@ -64,9 +65,9 @@ struct ExpenseEditorViewModelTests {
 
         #expect(await viewModel.save())
         #expect(repository.insertedIndex == 0)
-        #expect(repository.inserted?.amount == 9500)
-        #expect(repository.inserted?.memo == "점심")
-        #expect(repository.inserted?.date == day, "달력일이 그대로 유지되어야 한다")
+        #expect(repository.inserted.first?.amount == 9500)
+        #expect(repository.inserted.first?.memo == "점심")
+        #expect(repository.inserted.first?.date == day, "달력일이 그대로 유지되어야 한다")
     }
 
     @Test("수정 모드는 기존 값을 채우고 id 를 유지한다")
@@ -102,14 +103,14 @@ struct ExpenseEditorViewModelTests {
 }
 
 private final class RecordingRepository: ExpenseRepository, @unchecked Sendable {
-    private(set) var inserted: Expense?
+    private(set) var inserted: [Expense] = []
     private(set) var insertedIndex: Int?
     private(set) var updated: Expense?
 
     func expenses(on day: Date) async throws -> [Expense] { [] }
     func expenses(in range: Range<Date>) async throws -> [Expense] { [] }
     func insert(_ expense: Expense, at index: Int) async throws {
-        inserted = expense
+        inserted.append(expense)
         insertedIndex = index
     }
     func update(_ expense: Expense) async throws { updated = expense }
@@ -137,7 +138,8 @@ struct AmountFieldTests {
         ExpenseEditorViewModel(
             route: .create(day: CalendarDay.today()),
             expenseRepository: NoopExpenseRepository(),
-            categoryRepository: NoopCategoryRepository()
+            categoryRepository: NoopCategoryRepository(),
+            settingsRepository: FixedSettingsRepository()
         )
     }
 
@@ -172,6 +174,17 @@ struct AmountFieldTests {
     }
 }
 
+private actor FixedSettingsRepository: SettingsRepository {
+    private var stored: AppSettings
+
+    init(splitItem: SplitItem? = nil) {
+        stored = AppSettings(splitItem: splitItem)
+    }
+
+    func settings() async throws -> AppSettings { stored }
+    func update(_ settings: AppSettings) async throws { stored = settings }
+}
+
 private final class NoopExpenseRepository: ExpenseRepository, @unchecked Sendable {
     func expenses(on day: Date) async throws -> [Expense] { [] }
     func expenses(in range: Range<Date>) async throws -> [Expense] { [] }
@@ -188,4 +201,136 @@ private final class NoopCategoryRepository: CategoryRepository, @unchecked Senda
     func update(_ category: ExpenseCategory) async throws {}
     func delete(id: UUID) async throws {}
     func reorder(_ orderedIDs: [UUID]) async throws {}
+}
+
+@MainActor
+@Suite("정액 품목 분리")
+struct SplitItemTests {
+
+    private let day = CalendarDay.today()
+    private let tobaccoCategory = ExpenseCategory(name: "담배", symbolName: "smoke", colorToken: .gray)
+    private let storeCategory = ExpenseCategory(name: "편의점", symbolName: "cart", colorToken: .green, sortOrder: 1)
+
+    private func makeViewModel(unitAmount: Decimal = 4_500) -> (ExpenseEditorViewModel, RecordingRepository) {
+        let repository = RecordingRepository()
+        let item = SplitItem(
+            name: "담배", unitAmount: unitAmount,
+            categoryID: tobaccoCategory.id, unitLabel: "갑"
+        )
+        let viewModel = ExpenseEditorViewModel(
+            route: .create(day: day),
+            expenseRepository: repository,
+            categoryRepository: FixedCategoryRepository(categories: [storeCategory, tobaccoCategory]),
+            settingsRepository: FixedSettingsRepository(splitItem: item)
+        )
+        return (viewModel, repository)
+    }
+
+    @Test("수량이 0이면 한 건으로 저장된다")
+    func noSplit() async {
+        let (viewModel, repository) = makeViewModel()
+        await viewModel.load()
+        viewModel.updateAmount("12000")
+
+        #expect(await viewModel.save())
+        #expect(repository.inserted.count == 1)
+        #expect(repository.inserted.first?.amount == 12_000)
+    }
+
+    @Test("수량을 넣으면 두 건으로 나뉜다")
+    func splitsIntoTwo() async {
+        let (viewModel, repository) = makeViewModel()
+        await viewModel.load()
+        viewModel.updateAmount("12000")
+        viewModel.memo = "간식"
+        viewModel.splitQuantity = 2
+
+        #expect(await viewModel.save())
+        #expect(repository.inserted.count == 2)
+
+        let tobacco = repository.inserted.first { $0.categoryID == tobaccoCategory.id }
+        let store = repository.inserted.first { $0.categoryID == storeCategory.id }
+        #expect(tobacco?.amount == 9_000)
+        #expect(tobacco?.memo == "담배 2갑")
+        #expect(store?.amount == 3_000)
+        #expect(store?.memo == "간식")
+    }
+
+    @Test("합계는 원래 금액과 같다")
+    func totalPreserved() async {
+        let (viewModel, repository) = makeViewModel()
+        await viewModel.load()
+        viewModel.updateAmount("12000")
+        viewModel.splitQuantity = 2
+        _ = await viewModel.save()
+
+        let total = repository.inserted.reduce(Decimal.zero) { $0 + $1.amount }
+        #expect(total == 12_000)
+    }
+
+    @Test("분리 금액이 총액과 같으면 한 건만 남는다")
+    func exactAmount() async {
+        let (viewModel, repository) = makeViewModel()
+        await viewModel.load()
+        viewModel.updateAmount("9000")
+        viewModel.splitQuantity = 2
+
+        #expect(await viewModel.save())
+        #expect(repository.inserted.count == 1)
+        #expect(repository.inserted.first?.categoryID == tobaccoCategory.id)
+    }
+
+    @Test("분리 금액이 총액을 넘으면 저장할 수 없다")
+    func overflow() async {
+        let (viewModel, _) = makeViewModel()
+        await viewModel.load()
+        viewModel.updateAmount("5000")
+        viewModel.splitQuantity = 2
+
+        #expect(!viewModel.isSplitAmountValid)
+        #expect(!viewModel.canSave)
+    }
+
+    @Test("미리보기에 나뉜 결과가 보인다")
+    func preview() async {
+        let (viewModel, _) = makeViewModel()
+        await viewModel.load()
+        viewModel.categoryID = storeCategory.id
+        viewModel.updateAmount("12000")
+        viewModel.splitQuantity = 2
+
+        #expect(viewModel.splitPreview == "담배 2갑 9,000원 · 편의점 3,000원")
+    }
+
+    @Test("수정 화면에서는 분리 입력을 보여주지 않는다")
+    func hiddenWhenEditing() async {
+        let existing = Expense(amount: 1_000, categoryID: storeCategory.id, date: day)
+        let viewModel = ExpenseEditorViewModel(
+            route: .edit(existing),
+            expenseRepository: RecordingRepository(),
+            categoryRepository: FixedCategoryRepository(categories: [storeCategory, tobaccoCategory]),
+            settingsRepository: FixedSettingsRepository(
+                splitItem: SplitItem(name: "담배", unitAmount: 4_500, categoryID: tobaccoCategory.id)
+            )
+        )
+        await viewModel.load()
+
+        #expect(!viewModel.showsSplitField)
+    }
+
+    @Test("대상 카테고리가 지워졌으면 기능을 감춘다")
+    func missingCategory() async {
+        let viewModel = ExpenseEditorViewModel(
+            route: .create(day: day),
+            expenseRepository: RecordingRepository(),
+            categoryRepository: FixedCategoryRepository(categories: [storeCategory]),
+            settingsRepository: FixedSettingsRepository(
+                splitItem: SplitItem(name: "담배", unitAmount: 4_500, categoryID: UUID())
+            )
+        )
+        await viewModel.load()
+
+        #expect(viewModel.splitItem == nil)
+        #expect(!viewModel.showsSplitField)
+    }
 }

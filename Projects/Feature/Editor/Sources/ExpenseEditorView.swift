@@ -19,6 +19,7 @@ public struct ExpenseEditorView: View {
         route: EditorRoute,
         expenseRepository: any ExpenseRepository,
         categoryRepository: any CategoryRepository,
+        settingsRepository: any SettingsRepository,
         onSaved: @escaping () -> Void
     ) {
         self.onSaved = onSaved
@@ -26,7 +27,8 @@ public struct ExpenseEditorView: View {
             initialValue: ExpenseEditorViewModel(
                 route: route,
                 expenseRepository: expenseRepository,
-                categoryRepository: categoryRepository
+                categoryRepository: categoryRepository,
+                settingsRepository: settingsRepository
             )
         )
     }
@@ -39,6 +41,7 @@ public struct ExpenseEditorView: View {
                     categorySection
                     daySection
                     memoSection
+                    splitSection
                 }
                 .padding(AppSpacing.screenMargin)
                 .frame(maxWidth: .infinity, alignment: .top)
@@ -139,6 +142,41 @@ public struct ExpenseEditorView: View {
             .environment(\.calendar, CalendarDay.calendar)
             .environment(\.timeZone, CalendarDay.calendar.timeZone)
             .environment(\.locale, CalendarDay.locale)
+        }
+    }
+
+    /// 정액 품목 분리. 설정에서 켠 경우에만 보인다.
+    @ViewBuilder
+    private var splitSection: some View {
+        if viewModel.showsSplitField, let item = viewModel.splitItem {
+            EditorSection(title: "\(item.name) 분리") {
+                VStack(alignment: .leading, spacing: AppSpacing.sm) {
+                    Stepper(
+                        value: $viewModel.splitQuantity, in: 0 ... 99
+                    ) {
+                        HStack {
+                            Text("수량")
+                                .foregroundStyle(AppColor.textSecondary)
+                            Spacer()
+                            Text("\(viewModel.splitQuantity)\(item.unitLabel)")
+                                .font(AppFont.amount)
+                                .foregroundStyle(AppColor.textPrimary)
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.md)
+                    .padding(.vertical, AppSpacing.sm)
+                    .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.sm))
+
+                    if let preview = viewModel.splitPreview {
+                        Text(preview)
+                            .font(AppFont.caption)
+                            .foregroundStyle(
+                                viewModel.isSplitAmountValid
+                                    ? AppColor.accent : AppColor.category(.red)
+                            )
+                    }
+                }
+            }
         }
     }
 

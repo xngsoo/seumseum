@@ -13,21 +13,28 @@ public final class ExpenseEditorViewModel {
     public var day: Date
     public var memo: String = ""
 
+    /// 분리할 수량. 0 이면 분리하지 않는다.
+    public var splitQuantity = 0
+
     public private(set) var categories: [ExpenseCategory] = []
+    public private(set) var splitItem: SplitItem?
     public private(set) var isSaving = false
     public private(set) var errorMessage: String?
 
     private let expenseRepository: any ExpenseRepository
     private let categoryRepository: any CategoryRepository
+    private let settingsRepository: any SettingsRepository
 
     public init(
         route: EditorRoute,
         expenseRepository: any ExpenseRepository,
-        categoryRepository: any CategoryRepository
+        categoryRepository: any CategoryRepository,
+        settingsRepository: any SettingsRepository
     ) {
         self.route = route
         self.expenseRepository = expenseRepository
         self.categoryRepository = categoryRepository
+        self.settingsRepository = settingsRepository
 
         switch route {
         case let .create(day):
@@ -60,14 +67,60 @@ public final class ExpenseEditorViewModel {
         amountDigits.isEmpty ? "" : AmountFormatter.grouped(amount)
     }
 
+    // MARK: - 정액 품목 분리
+
+    /// 분리 입력을 보여줄지. 수정 화면에서는 감춘다.
+    /// 이미 나뉜 기록을 다시 나누면 어느 쪽을 고쳐야 할지 모호해진다.
+    public var showsSplitField: Bool {
+        splitItem != nil && !isEditing
+    }
+
+    /// 떼어낼 금액
+    public var splitAmount: Decimal {
+        splitItem?.amount(for: splitQuantity) ?? .zero
+    }
+
+    /// 원래 카테고리에 남는 금액
+    public var remainingAmount: Decimal {
+        max(amount - splitAmount, .zero)
+    }
+
+    public var isSplitting: Bool { splitQuantity > 0 && splitItem != nil }
+
+    /// 분리 금액이 총액을 넘으면 저장할 수 없다.
+    public var isSplitAmountValid: Bool {
+        guard let splitItem, splitQuantity > 0 else { return true }
+        return splitItem.canSplit(quantity: splitQuantity, from: amount)
+    }
+
+    /// 분리 결과 미리보기. `담배 2갑 9,000원 · 편의점 3,500원`
+    public var splitPreview: String? {
+        guard let splitItem, isSplitting else { return nil }
+        guard isSplitAmountValid else { return "금액이 부족합니다" }
+        let categoryName = categories.first { $0.id == categoryID }?.name ?? "나머지"
+        let head = "\(splitItem.memo(for: splitQuantity)) \(AmountFormatter.full(splitAmount))"
+        guard remainingAmount > .zero else { return head }
+        return "\(head) · \(categoryName) \(AmountFormatter.full(remainingAmount))"
+    }
+
     public var canSave: Bool {
-        amount > .zero && categoryID != nil && !isSaving
+        amount > .zero && categoryID != nil && !isSaving && isSplitAmountValid
     }
 
     public func load() async {
         do {
-            categories = try await categoryRepository.categories()
-            if categoryID == nil { categoryID = categories.first?.id }
+            async let loadedCategories = categoryRepository.categories()
+            async let loadedSettings = settingsRepository.settings()
+            let (allCategories, settings) = try await (loadedCategories, loadedSettings)
+            categories = allCategories
+            if categoryID == nil { categoryID = allCategories.first?.id }
+            // 대상 카테고리가 지워졌으면 기능을 노출하지 않는다.
+            if let split = settings.splitItem,
+               allCategories.contains(where: { $0.id == split.categoryID }) {
+                splitItem = split
+            } else {
+                splitItem = nil
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -89,12 +142,7 @@ public final class ExpenseEditorViewModel {
         do {
             switch route {
             case .create:
-                // day 는 이미 달력일이므로 .gmt 로 정규화해야 값이 바뀌지 않는다
-                let expense = Expense.make(
-                    amount: amount, memo: memo, categoryID: categoryID,
-                    pickedDate: day, timeZone: .gmt
-                )
-                try await expenseRepository.insert(expense, at: 0)
+                try await insertCreated(categoryID: categoryID)
             case let .edit(original):
                 var edited = original
                 edited.amount = amount
@@ -108,6 +156,29 @@ public final class ExpenseEditorViewModel {
             errorMessage = error.localizedDescription
             return false
         }
+    }
+
+    /// 분리가 켜져 있으면 두 건으로 나눠 넣는다. 나머지가 0 이면 분리분만 넣는다.
+    /// 목록 맨 위에 원래 카테고리가 오도록 분리분을 먼저 넣는다.
+    private func insertCreated(categoryID: UUID) async throws {
+        // day 는 이미 달력일이므로 .gmt 로 정규화해야 값이 바뀌지 않는다
+        func make(_ amount: Decimal, _ memo: String, _ category: UUID) -> Expense {
+            Expense.make(
+                amount: amount, memo: memo, categoryID: category,
+                pickedDate: day, timeZone: .gmt
+            )
+        }
+
+        guard let splitItem, isSplitting else {
+            try await expenseRepository.insert(make(amount, memo, categoryID), at: 0)
+            return
+        }
+
+        try await expenseRepository.insert(
+            make(splitAmount, splitItem.memo(for: splitQuantity), splitItem.categoryID), at: 0
+        )
+        guard remainingAmount > .zero else { return }
+        try await expenseRepository.insert(make(remainingAmount, memo, categoryID), at: 0)
     }
 
     private static func digits(from amount: Decimal) -> String {
