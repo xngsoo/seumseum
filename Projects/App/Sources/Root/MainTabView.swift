@@ -6,6 +6,7 @@ import Persistence
 import Daily
 import Editor
 import Statistics
+import Settings
 
 struct MainTabView: View {
     let stack: PersistenceStack
@@ -52,7 +53,10 @@ struct MainTabView: View {
                 settingsRepository: stack.settings
             )
         case .settings:
-            PlaceholderScreen(title: "설정", detail: "탭 4 — 카테고리·급여일")
+            SettingsView(
+                settingsRepository: stack.settings,
+                categoryRepository: stack.categories
+            )
         }
     }
 }

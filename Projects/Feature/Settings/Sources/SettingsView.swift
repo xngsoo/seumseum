@@ -1,0 +1,116 @@
+import SwiftUI
+import DesignSystem
+import Domain
+import Shared
+
+public struct SettingsView: View {
+    @State private var viewModel: SettingsViewModel
+
+    private let categoryRepository: any CategoryRepository
+
+    public init(
+        settingsRepository: any SettingsRepository,
+        categoryRepository: any CategoryRepository
+    ) {
+        self.categoryRepository = categoryRepository
+        _viewModel = State(initialValue: SettingsViewModel(settingsRepository: settingsRepository))
+    }
+
+    public var body: some View {
+        NavigationStack {
+            List {
+                categorySection
+                payPeriodSection
+                comingSoonSection
+            }
+            .listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .background(AppColor.background)
+            .navigationTitle("설정")
+            .task { await viewModel.load() }
+            .alert("통계 기준이 바뀝니다", isPresented: $viewModel.isNoticePresented) {
+                Button("확인", role: .cancel) {}
+            } message: {
+                Text("통계를 급여 주기 단위로 봅니다. 이미 기록한 지출은 그대로이고, 묶어 보는 기준만 달라집니다.")
+            }
+        }
+    }
+
+    private var payPeriodSection: some View {
+        Section {
+            Toggle("급여일 사용", isOn: paydayBinding)
+                .tint(AppColor.accent)
+
+            if viewModel.isPaydayEnabled {
+                Picker("급여일", selection: dayBinding) {
+                    ForEach(PaydayDay.pickerOptions, id: \.self) { day in
+                        Text(day.title).tag(day)
+                    }
+                }
+                Picker("지급일 보정", selection: adjustmentBinding) {
+                    ForEach(PaydayAdjustment.allCases, id: \.self) { rule in
+                        Text(rule.title).tag(rule)
+                    }
+                }
+            }
+        } header: {
+            Text("급여 주기")
+        } footer: {
+            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                Text(viewModel.previewCaption)
+                    .foregroundStyle(AppColor.accent)
+                Text("월급날을 기준으로 한 달을 묶어 통계를 봅니다. 일별·달력 화면은 그대로 달력 기준입니다.")
+            }
+            .font(AppFont.caption)
+        }
+        .listRowBackground(AppColor.surface)
+    }
+
+    private var categorySection: some View {
+        Section("분류") {
+            NavigationLink {
+                CategoryListView(categoryRepository: categoryRepository)
+            } label: {
+                Label("카테고리 관리", systemImage: "square.grid.2x2")
+            }
+        }
+        .listRowBackground(AppColor.surface)
+    }
+
+    private var comingSoonSection: some View {
+        Section("준비 중") {
+            ForEach(["통화 표시", "기록 리마인더", "CSV 내보내기", "앱 잠금"], id: \.self) { title in
+                HStack {
+                    Text(title)
+                        .foregroundStyle(AppColor.textSecondary)
+                    Spacer()
+                    Text("곧 지원")
+                        .font(AppFont.caption)
+                        .foregroundStyle(AppColor.textSecondary)
+                }
+            }
+        }
+        .listRowBackground(AppColor.surface)
+    }
+
+    private var paydayBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.isPaydayEnabled },
+            set: { enabled in Task { await viewModel.setPaydayEnabled(enabled) } }
+        )
+    }
+
+    private var dayBinding: Binding<PaydayDay> {
+        Binding(
+            get: { viewModel.paydayDay },
+            set: { day in Task { await viewModel.setPaydayDay(day) } }
+        )
+    }
+
+    private var adjustmentBinding: Binding<PaydayAdjustment> {
+        Binding(
+            get: { viewModel.adjustment },
+            set: { rule in Task { await viewModel.setAdjustment(rule) } }
+        )
+    }
+}
