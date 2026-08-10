@@ -10,7 +10,7 @@ import Foundation
 
 public enum PayPeriodSetting: Hashable, Sendable {
     case calendarMonth
-    case payday(dayOfMonth: Int, adjustment: PaydayAdjustment)
+    case payday(day: PaydayDay, adjustment: PaydayAdjustment)
     
     public static let `default`: PayPeriodSetting = .calendarMonth
 }

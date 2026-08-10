@@ -9,7 +9,11 @@ public final class UserDefaultsSettingsRepository: SettingsRepository, @unchecke
         static let paydayEnabled = "settings.payday.enabled"
         static let paydayDayOfMonth = "settings.payday.dayOfMonth"
         static let paydayAdjustment = "settings.payday.adjustment"
+        static let paydayNoticeSeen = "settings.payday.noticeSeen"
     }
+
+    /// 저장 포맷에서 말일을 나타내는 값
+    private static let lastDaySentinel = 0
 
     private let defaults: UserDefaults
 
@@ -18,23 +22,34 @@ public final class UserDefaultsSettingsRepository: SettingsRepository, @unchecke
     }
 
     public func settings() async throws -> AppSettings {
+        // 급여일 on/off 와 무관하게 저장·복원해야 껐다 켜도 안내가 다시 뜨지 않는다.
+        let noticeSeen = defaults.bool(forKey: Key.paydayNoticeSeen)
         guard defaults.bool(forKey: Key.paydayEnabled) else {
-            return AppSettings(payPeriod: .calendarMonth)
+            return AppSettings(payPeriod: .calendarMonth, hasSeenPaydayNotice: noticeSeen)
         }
-        let day = defaults.integer(forKey: Key.paydayDayOfMonth)
+        // 0 은 말일을 뜻한다. 실제 일자는 1…31 이라 겹치지 않는다.
+        let stored = defaults.integer(forKey: Key.paydayDayOfMonth)
+        let day: PaydayDay = stored == Self.lastDaySentinel ? .lastDay : .day(stored)
         let raw = defaults.string(forKey: Key.paydayAdjustment) ?? ""
         // PaydayAdjustment 에 none 케이스가 있어 Optional.none 과 헷갈린다. 타입을 명시한다.
         let adjustment = PaydayAdjustment(rawValue: raw) ?? PaydayAdjustment.prevBusinessDay
-        return AppSettings(payPeriod: .payday(dayOfMonth: day, adjustment: adjustment))
+        return AppSettings(
+            payPeriod: .payday(day: day, adjustment: adjustment),
+            hasSeenPaydayNotice: noticeSeen
+        )
     }
 
     public func update(_ settings: AppSettings) async throws {
+        defaults.set(settings.hasSeenPaydayNotice, forKey: Key.paydayNoticeSeen)
         switch settings.payPeriod {
         case .calendarMonth:
             defaults.set(false, forKey: Key.paydayEnabled)
-        case let .payday(dayOfMonth, adjustment):
+        case let .payday(day, adjustment):
             defaults.set(true, forKey: Key.paydayEnabled)
-            defaults.set(dayOfMonth, forKey: Key.paydayDayOfMonth)
+            switch day {
+            case let .day(value): defaults.set(value, forKey: Key.paydayDayOfMonth)
+            case .lastDay: defaults.set(Self.lastDaySentinel, forKey: Key.paydayDayOfMonth)
+            }
             defaults.set(adjustment.rawValue, forKey: Key.paydayAdjustment)
         }
     }

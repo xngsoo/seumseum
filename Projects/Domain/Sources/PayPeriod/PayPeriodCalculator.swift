@@ -17,8 +17,8 @@ public enum PayPeriodCalculator {
             let month = CalendarDay.monthRange(containing: day)
             return PayPeriod(start: month.lowerBound, end: month.upperBound)
 
-        case let .payday(dayOfMonth, adjustment):
-            let candidates = paydays(around: day, dayOfMonth: dayOfMonth, adjustment: adjustment)
+        case let .payday(paydayDay, adjustment):
+            let candidates = paydays(around: day, paydayDay: paydayDay, adjustment: adjustment)
             guard let index = candidates.lastIndex(where: { $0 <= day }),
                   index + 1 < candidates.count
             else {
@@ -38,11 +38,11 @@ public enum PayPeriodCalculator {
     }
 
     public static func payday(
-        year: Int, month: Int, dayOfMonth: Int, adjustment: PaydayAdjustment
+        year: Int, month: Int, day paydayDay: PaydayDay, adjustment: PaydayAdjustment
     ) -> Date? {
-        guard let lastDay = CalendarDay.daysInMonth(year: year, month: month) else { return nil }
-        let clamped = min(max(dayOfMonth, 1), lastDay)
-        guard let base = CalendarDay.date(year: year, month: month, day: clamped) else { return nil }
+        guard let daysInMonth = CalendarDay.daysInMonth(year: year, month: month) else { return nil }
+        let resolved = paydayDay.resolved(daysInMonth: daysInMonth)
+        guard let base = CalendarDay.date(year: year, month: month, day: resolved) else { return nil }
         return adjusted(base, by: adjustment)
     }
 
@@ -60,7 +60,7 @@ public enum PayPeriodCalculator {
     }
 
     private static func paydays(
-        around day: Date, dayOfMonth: Int, adjustment: PaydayAdjustment
+        around day: Date, paydayDay: PaydayDay, adjustment: PaydayAdjustment
     ) -> [Date] {
         let anchor = CalendarDay.startOfMonth(containing: day)
         return (-2 ... 2).compactMap { offset -> Date? in
@@ -69,7 +69,7 @@ public enum PayPeriodCalculator {
             guard let year = parts.year, let monthNumber = parts.month else { return nil }
             return payday(
                 year: year, month: monthNumber,
-                dayOfMonth: dayOfMonth, adjustment: adjustment
+                day: paydayDay, adjustment: adjustment
             )
         }
         .sorted()

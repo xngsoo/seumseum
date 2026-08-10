@@ -23,7 +23,7 @@ struct SettingsRepositoryTests {
     @Test("급여일 설정을 저장하고 다시 읽는다")
     func roundTrip() async throws {
         let repository = UserDefaultsSettingsRepository(defaults: try makeDefaults())
-        let setting = AppSettings(payPeriod: .payday(dayOfMonth: 25, adjustment: .nextBusinessDay))
+        let setting = AppSettings(payPeriod: .payday(day: .day(25), adjustment: .nextBusinessDay))
 
         try await repository.update(setting)
 
@@ -33,7 +33,7 @@ struct SettingsRepositoryTests {
     @Test("급여일을 껐다가 다시 읽으면 달력상의 월이다")
     func disable() async throws {
         let repository = UserDefaultsSettingsRepository(defaults: try makeDefaults())
-        try await repository.update(AppSettings(payPeriod: .payday(dayOfMonth: 10, adjustment: .none)))
+        try await repository.update(AppSettings(payPeriod: .payday(day: .day(10), adjustment: .none)))
         try await repository.update(AppSettings(payPeriod: .calendarMonth))
 
         #expect(try await repository.settings().payPeriod == .calendarMonth)
@@ -49,7 +49,7 @@ struct SettingsRepositoryTests {
         let repository = UserDefaultsSettingsRepository(defaults: defaults)
         #expect(
             try await repository.settings().payPeriod
-                == .payday(dayOfMonth: 25, adjustment: .prevBusinessDay)
+                == .payday(day: .day(25), adjustment: .prevBusinessDay)
         )
     }
 }

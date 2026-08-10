@@ -38,7 +38,7 @@ struct PayPeriodTests {
 
     @Test("25일 지급, 보정 없음 → 7/25 ~ 8/24")
     func basicPeriod() throws {
-        let setting = PayPeriodSetting.payday(dayOfMonth: 25, adjustment: .none)
+        let setting = PayPeriodSetting.payday(day: .day(25), adjustment: .none)
         let period = PayPeriodCalculator.period(containing: try day(2026, 8, 1), setting: setting)
         #expect(ymd(period.start) == "2026-07-25")
         #expect(ymd(period.lastDay) == "2026-08-24")
@@ -46,7 +46,7 @@ struct PayPeriodTests {
 
     @Test("지급일 당일은 새 주기의 첫날")
     func paydayStartsNewPeriod() throws {
-        let setting = PayPeriodSetting.payday(dayOfMonth: 25, adjustment: .none)
+        let setting = PayPeriodSetting.payday(day: .day(25), adjustment: .none)
         let period = PayPeriodCalculator.period(containing: try day(2026, 8, 25), setting: setting)
         #expect(ymd(period.start) == "2026-08-25")
     }
@@ -57,7 +57,7 @@ struct PayPeriodTests {
     func saturdayToPreviousFriday() throws {
         // 2026-07-25 은 토요일
         let result = PayPeriodCalculator.payday(
-            year: 2026, month: 7, dayOfMonth: 25, adjustment: .prevBusinessDay
+            year: 2026, month: 7, day: .day(25), adjustment: .prevBusinessDay
         )
         #expect(ymd(try #require(result)) == "2026-07-24")
     }
@@ -66,7 +66,7 @@ struct PayPeriodTests {
     func sundayToPreviousFriday() throws {
         // 2026-10-25 는 일요일
         let result = PayPeriodCalculator.payday(
-            year: 2026, month: 10, dayOfMonth: 25, adjustment: .prevBusinessDay
+            year: 2026, month: 10, day: .day(25), adjustment: .prevBusinessDay
         )
         #expect(ymd(try #require(result)) == "2026-10-23")
     }
@@ -74,7 +74,7 @@ struct PayPeriodTests {
     @Test("토요일 지급일 → 다음 영업일은 월요일")
     func saturdayToNextMonday() throws {
         let result = PayPeriodCalculator.payday(
-            year: 2026, month: 7, dayOfMonth: 25, adjustment: .nextBusinessDay
+            year: 2026, month: 7, day: .day(25), adjustment: .nextBusinessDay
         )
         #expect(ymd(try #require(result)) == "2026-07-27")
     }
@@ -82,7 +82,7 @@ struct PayPeriodTests {
     @Test("보정 없음이면 주말이어도 그대로")
     func noAdjustmentKeepsWeekend() throws {
         let result = PayPeriodCalculator.payday(
-            year: 2026, month: 7, dayOfMonth: 25, adjustment: .none
+            year: 2026, month: 7, day: .day(25), adjustment: .none
         )
         #expect(ymd(try #require(result)) == "2026-07-25")
     }
@@ -93,12 +93,12 @@ struct PayPeriodTests {
     func clampToLastDayThenWeekend() throws {
         // 2026-02-28 은 토요일
         let none = PayPeriodCalculator.payday(
-            year: 2026, month: 2, dayOfMonth: 31, adjustment: .none
+            year: 2026, month: 2, day: .day(31), adjustment: .none
         )
         #expect(ymd(try #require(none)) == "2026-02-28")
 
         let previous = PayPeriodCalculator.payday(
-            year: 2026, month: 2, dayOfMonth: 31, adjustment: .prevBusinessDay
+            year: 2026, month: 2, day: .day(31), adjustment: .prevBusinessDay
         )
         #expect(ymd(try #require(previous)) == "2026-02-27")
     }
@@ -106,7 +106,7 @@ struct PayPeriodTests {
     @Test("윤년 2월은 29일까지 인정")
     func leapYear() throws {
         let result = PayPeriodCalculator.payday(
-            year: 2028, month: 2, dayOfMonth: 31, adjustment: .none
+            year: 2028, month: 2, day: .day(31), adjustment: .none
         )
         #expect(ymd(try #require(result)) == "2028-02-29")
     }
@@ -116,9 +116,9 @@ struct PayPeriodTests {
     @Test("보정이 다음 달로 넘어가도 주기 판정이 맞다")
     func adjustmentCrossesIntoNextMonth() throws {
         // 2026-02-28(토) + nextBusinessDay → 2026-03-02
-        let setting = PayPeriodSetting.payday(dayOfMonth: 31, adjustment: .nextBusinessDay)
+        let setting = PayPeriodSetting.payday(day: .day(31), adjustment: .nextBusinessDay)
         let februaryPayday = PayPeriodCalculator.payday(
-            year: 2026, month: 2, dayOfMonth: 31, adjustment: .nextBusinessDay
+            year: 2026, month: 2, day: .day(31), adjustment: .nextBusinessDay
         )
         #expect(ymd(try #require(februaryPayday)) == "2026-03-02")
 
@@ -131,9 +131,9 @@ struct PayPeriodTests {
     @Test("보정이 이전 달로 넘어가도 주기 판정이 맞다")
     func adjustmentCrossesIntoPreviousMonth() throws {
         // 2026-08-01 은 토요일 → prevBusinessDay → 2026-07-31
-        let setting = PayPeriodSetting.payday(dayOfMonth: 1, adjustment: .prevBusinessDay)
+        let setting = PayPeriodSetting.payday(day: .day(1), adjustment: .prevBusinessDay)
         let augustPayday = PayPeriodCalculator.payday(
-            year: 2026, month: 8, dayOfMonth: 1, adjustment: .prevBusinessDay
+            year: 2026, month: 8, day: .day(1), adjustment: .prevBusinessDay
         )
         #expect(ymd(try #require(augustPayday)) == "2026-07-31")
 
@@ -145,7 +145,7 @@ struct PayPeriodTests {
 
     @Test("이전·다음 주기가 빈틈이나 겹침 없이 이어진다")
     func periodsAreContiguous() throws {
-        let setting = PayPeriodSetting.payday(dayOfMonth: 31, adjustment: .prevBusinessDay)
+        let setting = PayPeriodSetting.payday(day: .day(31), adjustment: .prevBusinessDay)
         var period = PayPeriodCalculator.period(containing: try day(2026, 1, 15), setting: setting)
 
         for _ in 0 ..< 24 {
@@ -159,13 +159,94 @@ struct PayPeriodTests {
 
     @Test("모든 날짜는 정확히 하나의 주기에 속한다")
     func everyDayBelongsToExactlyOnePeriod() throws {
-        let setting = PayPeriodSetting.payday(dayOfMonth: 25, adjustment: .prevBusinessDay)
+        let setting = PayPeriodSetting.payday(day: .day(25), adjustment: .prevBusinessDay)
         var cursor = try day(2026, 1, 1)
         let end = try day(2027, 1, 1)
 
         while cursor < end {
             let period = PayPeriodCalculator.period(containing: cursor, setting: setting)
             #expect(period.contains(cursor), "\(ymd(cursor)) 가 \(ymd(period.start))~\(ymd(period.lastDay)) 에 없음")
+            cursor = CalendarDay.adding(days: 1, to: cursor)
+        }
+    }
+}
+
+@Suite("말일 급여일")
+struct LastDayPaydayTests {
+
+    private func day(_ year: Int, _ month: Int, _ day: Int) throws -> Date {
+        try #require(CalendarDay.date(year: year, month: month, day: day))
+    }
+
+    private func ymd(_ date: Date) -> String {
+        let c = CalendarDay.components(of: date)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    @Test("말일은 달마다 실제 마지막 날로 계산된다")
+    func resolvesPerMonth() throws {
+        let cases: [(Int, Int, String)] = [
+            (2026, 1, "2026-01-31"),
+            (2026, 2, "2026-02-28"),
+            (2028, 2, "2028-02-29"),
+            (2026, 4, "2026-04-30"),
+            (2026, 12, "2026-12-31"),
+        ]
+        for (year, month, expected) in cases {
+            let result = PayPeriodCalculator.payday(
+                year: year, month: month, day: .lastDay, adjustment: .none
+            )
+            #expect(ymd(try #require(result)) == expected)
+        }
+    }
+
+    @Test("말일에도 주말 보정이 적용된다")
+    func weekendAdjustment() throws {
+        // 2026-01-31 은 토요일
+        let previous = PayPeriodCalculator.payday(
+            year: 2026, month: 1, day: .lastDay, adjustment: .prevBusinessDay
+        )
+        #expect(ymd(try #require(previous)) == "2026-01-30")
+
+        let next = PayPeriodCalculator.payday(
+            year: 2026, month: 1, day: .lastDay, adjustment: .nextBusinessDay
+        )
+        #expect(ymd(try #require(next)) == "2026-02-02")
+    }
+
+    @Test("말일 주기는 말일에서 다음 말일 전날까지다")
+    func period() throws {
+        let setting = PayPeriodSetting.payday(day: .lastDay, adjustment: .none)
+        let result = PayPeriodCalculator.period(containing: try day(2026, 2, 10), setting: setting)
+
+        #expect(ymd(result.start) == "2026-01-31")
+        #expect(ymd(result.lastDay) == "2026-02-27")
+    }
+
+    @Test("말일과 31일은 2월에서 결과가 같고 뜻이 다르다")
+    func lastDayVersus31() throws {
+        let byLastDay = PayPeriodCalculator.payday(
+            year: 2026, month: 2, day: .lastDay, adjustment: .none
+        )
+        let by31 = PayPeriodCalculator.payday(
+            year: 2026, month: 2, day: .day(31), adjustment: .none
+        )
+        #expect(ymd(try #require(byLastDay)) == ymd(try #require(by31)))
+
+        // 4월은 30일까지라 31일도 보정되지만, 6월 15일 같은 날은 다르다
+        #expect(PaydayDay.day(15).resolved(daysInMonth: 30) == 15)
+        #expect(PaydayDay.lastDay.resolved(daysInMonth: 30) == 30)
+    }
+
+    @Test("모든 날짜는 여전히 정확히 하나의 주기에 속한다")
+    func contiguous() throws {
+        let setting = PayPeriodSetting.payday(day: .lastDay, adjustment: .prevBusinessDay)
+        var cursor = try day(2026, 1, 1)
+        let end = try day(2027, 1, 1)
+
+        while cursor < end {
+            let period = PayPeriodCalculator.period(containing: cursor, setting: setting)
+            #expect(period.contains(cursor), "\(ymd(cursor)) 누락")
             cursor = CalendarDay.adding(days: 1, to: cursor)
         }
     }
