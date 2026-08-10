@@ -10,3 +10,6 @@ graph.png
 xcuserdata/
 *.xcuserstate
 .DS_Store
+
+# 개인별 서명 설정
+Tuist/Signing.local.xcconfig

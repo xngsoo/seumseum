@@ -1,0 +1,7 @@
+// 서명 설정. 팀 ID는 개인마다 다르므로 여기 적지 않는다.
+// 로컬 값은 Signing.local.xcconfig 에 두고, 그 파일은 커밋하지 않는다.
+DEVELOPMENT_TEAM =
+CODE_SIGN_STYLE = Automatic
+
+// 파일이 없어도 실패하지 않는다 (#include 뒤의 물음표)
+#include? "Signing.local.xcconfig"

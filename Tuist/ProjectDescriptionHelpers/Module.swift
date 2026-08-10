@@ -15,6 +15,15 @@ public let baseSettings: SettingsDictionary = [
     "SWIFT_STRICT_CONCURRENCY": "complete"
 ]
 
+// 서명 설정을 포함한 프로젝트 공통 Settings
+public let projectSettings: Settings = .settings(
+    base: baseSettings,
+    configurations: [
+        .debug(name: .debug, xcconfig: .relativeToRoot("Tuist/Signing.xcconfig")),
+        .release(name: .release, xcconfig: .relativeToRoot("Tuist/Signing.xcconfig"))
+    ]
+)
+
 // 의존성
 public extension TargetDependency {
     static let domain = TargetDependency.project(
@@ -94,7 +103,7 @@ public extension Project {
         return Project(
             name: name,
             organizationName: AppEnvironment.organizationName,
-            settings: .settings(base: baseSettings),
+            settings: projectSettings,
             targets: [sourceTarget, testTarget].compactMap{ $0 }
         )
     }
@@ -126,7 +135,7 @@ public extension Project {
         return Project(
             name: AppEnvironment.appName,
             organizationName: AppEnvironment.organizationName,
-            settings: .settings(base: baseSettings),
+            settings: projectSettings,
             targets: [appTarget]
         )
     }
