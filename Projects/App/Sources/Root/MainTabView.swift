@@ -31,6 +31,7 @@ struct MainTabView: View {
                 route: route,
                 expenseRepository: stack.expenses,
                 categoryRepository: stack.categories,
+                settingsRepository: stack.settings,
                 onSaved: { navigation.dataDidChange() }
             )
         }
@@ -55,7 +56,8 @@ struct MainTabView: View {
         case .settings:
             SettingsView(
                 settingsRepository: stack.settings,
-                categoryRepository: stack.categories
+                categoryRepository: stack.categories,
+                dataResetting: stack.reset
             )
         }
     }

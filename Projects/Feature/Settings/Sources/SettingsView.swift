@@ -4,16 +4,23 @@ import Domain
 import Shared
 
 public struct SettingsView: View {
+    @Environment(AppNavigation.self) private var navigation
     @State private var viewModel: SettingsViewModel
 
     private let categoryRepository: any CategoryRepository
 
     public init(
         settingsRepository: any SettingsRepository,
-        categoryRepository: any CategoryRepository
+        categoryRepository: any CategoryRepository,
+        dataResetting: any DataResetting
     ) {
         self.categoryRepository = categoryRepository
-        _viewModel = State(initialValue: SettingsViewModel(settingsRepository: settingsRepository))
+        _viewModel = State(
+            initialValue: SettingsViewModel(
+                settingsRepository: settingsRepository,
+                dataResetting: dataResetting
+            )
+        )
     }
 
     public var body: some View {
@@ -21,7 +28,8 @@ public struct SettingsView: View {
             List {
                 categorySection
                 payPeriodSection
-                comingSoonSection
+                //comingSoonSection
+                dataSection
             }
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
@@ -32,6 +40,26 @@ public struct SettingsView: View {
                 Button("확인", role: .cancel) {}
             } message: {
                 Text("통계를 급여 주기 단위로 봅니다. 이미 기록한 지출은 그대로이고, 묶어 보는 기준만 달라집니다.")
+            }
+            .confirmationDialog(
+                "모든 지출 기록을 지울까요?",
+                isPresented: $viewModel.isResetConfirmPresented,
+                titleVisibility: .visible
+            ) {
+                Button("모두 삭제", role: .destructive) {
+                    Task {
+                        await viewModel.resetAllExpenses()
+                        navigation.dataDidChange()
+                    }
+                }
+                Button("취소", role: .cancel) {}
+            } message: {
+                Text("되돌릴 수 없습니다. 카테고리와 설정은 그대로 남습니다.")
+            }
+            .alert("삭제했습니다", isPresented: $viewModel.isResetDonePresented) {
+                Button("확인", role: .cancel) {}
+            } message: {
+                Text("지출 기록을 모두 지웠습니다.")
             }
         }
     }
@@ -73,6 +101,22 @@ public struct SettingsView: View {
             } label: {
                 Label("카테고리 관리", systemImage: "square.grid.2x2")
             }
+
+            NavigationLink {
+                SplitItemView(
+                    initial: viewModel.splitItem,
+                    categoryRepository: categoryRepository,
+                    onSave: { item in Task { await viewModel.setSplitItem(item) } }
+                )
+            } label: {
+                LabeledContent {
+                    Text(viewModel.splitSummary)
+                        .font(AppFont.rowDetail)
+                        .foregroundStyle(AppColor.textSecondary)
+                } label: {
+                    Label("품목 분리", systemImage: "arrow.triangle.branch")
+                }
+            }
         }
         .listRowBackground(AppColor.surface)
     }
@@ -89,6 +133,27 @@ public struct SettingsView: View {
                         .foregroundStyle(AppColor.textSecondary)
                 }
             }
+        }
+        .listRowBackground(AppColor.surface)
+    }
+
+    private var dataSection: some View {
+        Section {
+            Button(role: .destructive) {
+                viewModel.isResetConfirmPresented = true
+            } label: {
+                HStack {
+                    Text("데이터 초기화")
+                    Spacer()
+                    if viewModel.isResetting { ProgressView() }
+                }
+            }
+            .disabled(viewModel.isResetting)
+        } header: {
+            Text("데이터")
+        } footer: {
+            Text("지출 기록을 모두 지웁니다. 카테고리와 설정은 남습니다.")
+                .font(AppFont.caption)
         }
         .listRowBackground(AppColor.surface)
     }

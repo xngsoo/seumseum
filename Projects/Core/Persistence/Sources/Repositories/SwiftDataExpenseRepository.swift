@@ -3,7 +3,7 @@ import SwiftData
 import Domain
 
 @ModelActor
-actor SwiftDataExpenseRepository: ExpenseRepository {
+actor SwiftDataExpenseRepository: ExpenseRepository, DataResetting {
 
     func expenses(on day: Date) throws -> [Expense] {
         try records(on: day).map(\.domain)
@@ -66,6 +66,17 @@ actor SwiftDataExpenseRepository: ExpenseRepository {
         let placed = Set(ordered.map(\.id))
         ordered.append(contentsOf: siblings.filter { !placed.contains($0.id) })
         reindex(ordered)
+        try save()
+    }
+
+    // MARK: - 초기화
+
+    func deleteAllExpenses() throws {
+        do {
+            try modelContext.delete(model: ExpenseRecord.self)
+        } catch {
+            throw DomainError.storageFailed(String(describing: error))
+        }
         try save()
     }
 

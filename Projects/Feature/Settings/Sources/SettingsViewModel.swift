@@ -17,11 +17,24 @@ public final class SettingsViewModel {
     /// 급여일을 처음 켤 때만 뜨는 안내
     public var isNoticePresented = false
 
+    /// 초기화 확인 다이얼로그
+    public var isResetConfirmPresented = false
+    /// 초기화 완료 알림
+    public var isResetDonePresented = false
+    public private(set) var isResetting = false
+
+    public private(set) var splitItem: SplitItem?
+
     private var hasSeenNotice = false
     private let settingsRepository: any SettingsRepository
+    private let dataResetting: any DataResetting
 
-    public init(settingsRepository: any SettingsRepository) {
+    public init(
+        settingsRepository: any SettingsRepository,
+        dataResetting: any DataResetting
+    ) {
         self.settingsRepository = settingsRepository
+        self.dataResetting = dataResetting
     }
 
     /// 지금 설정으로 계산한 이번 주기. `7/25 – 8/24`
@@ -45,6 +58,7 @@ public final class SettingsViewModel {
         do {
             let settings = try await settingsRepository.settings()
             hasSeenNotice = settings.hasSeenPaydayNotice
+            splitItem = settings.splitItem
             switch settings.payPeriod {
             case .calendarMonth:
                 isPaydayEnabled = false
@@ -77,10 +91,39 @@ public final class SettingsViewModel {
         await save()
     }
 
+    public func setSplitItem(_ item: SplitItem?) async {
+        splitItem = item
+        await save()
+    }
+
+    /// 설정 화면 행에 보이는 요약. `담배 · 4,500원 / 갑`
+    public var splitSummary: String {
+        guard let splitItem else { return "사용 안 함" }
+        return "\(splitItem.name) · \(AmountFormatter.full(splitItem.unitAmount)) / \(splitItem.unitLabel)"
+    }
+
+    /// 지출 기록만 지운다. 카테고리와 설정은 남긴다.
+    public func resetAllExpenses() async {
+        isResetting = true
+        defer { isResetting = false }
+        do {
+            try await dataResetting.deleteAllExpenses()
+            isResetDonePresented = true
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     private func save() async {
         do {
+            // splitItem 을 함께 넘기지 않으면 급여일을 저장할 때마다 분리 규칙이 지워진다.
             try await settingsRepository.update(
-                AppSettings(payPeriod: currentSetting, hasSeenPaydayNotice: hasSeenNotice)
+                AppSettings(
+                    payPeriod: currentSetting,
+                    hasSeenPaydayNotice: hasSeenNotice,
+                    splitItem: splitItem
+                )
             )
             errorMessage = nil
         } catch {
