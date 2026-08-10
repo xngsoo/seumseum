@@ -94,3 +94,46 @@ public extension CalendarDay {
         return formatter
     }()
 }
+
+public extension CalendarDay {
+
+    /// 월 표기. `2026년 8월`
+    static func monthText(_ day: Date) -> String {
+        monthFormatter.string(from: day)
+    }
+
+    /// 그 달 1일이 무슨 요일인지 (일=1 … 토=7)
+    static func firstWeekday(ofMonthContaining day: Date) -> Int {
+        calendar.component(.weekday, from: startOfMonth(containing: day))
+    }
+
+    /// 달력 그리드용 날짜 배열. 앞쪽 빈 칸은 nil 로 채운다.
+    static func monthGrid(containing day: Date) -> [Date?] {
+        let range = monthRange(containing: day)
+        let leading = firstWeekday(ofMonthContaining: day) - 1
+        var cells: [Date?] = Array(repeating: nil, count: leading)
+        var cursor = range.lowerBound
+        while cursor < range.upperBound {
+            cells.append(cursor)
+            cursor = adding(days: 1, to: cursor)
+        }
+        return cells
+    }
+
+    /// 요일 머리글. 일요일부터 시작한다.
+    static let weekdaySymbols: [String] = {
+        var formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = locale
+        return formatter.veryShortStandaloneWeekdaySymbols ?? ["일", "월", "화", "수", "목", "금", "토"]
+    }()
+
+    private static let monthFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.locale = locale
+        formatter.dateFormat = "yyyy년 M월"
+        return formatter
+    }()
+}
