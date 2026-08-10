@@ -2,6 +2,9 @@ import SwiftUI
 import DesignSystem
 
 struct DailyEmptyView: View {
+    let onPrevious: () -> Void
+    let onNext: () -> Void
+
     var body: some View {
         VStack(spacing: AppSpacing.sm) {
             Image(systemName: "tray")
@@ -15,9 +18,11 @@ struct DailyEmptyView: View {
                 .foregroundStyle(AppColor.textSecondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .gesture(DaySwipeGesture(onPrevious: onPrevious, onNext: onNext).gesture)
     }
 }
 
 #Preview {
-    DailyEmptyView()
+    DailyEmptyView(onPrevious: {}, onNext: {})
 }

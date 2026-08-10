@@ -21,11 +21,18 @@ public struct DailyView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            DailyHeader(day: navigation.selectedDate, total: viewModel.total)
+            DailyHeader( 
+                day: navigation.selectedDate,
+                total: viewModel.total,
+                onPrevious: { step(-1) },
+                onNext: { step(1) }
+            )
             Divider().overlay(AppColor.separator)
             listContent
         }
         .background(AppColor.background)
+        .overlay(alignment: .bottom) { undoBar }
+        .animation(.snappy, value: viewModel.pendingUndo)
         .task(id: navigation.selectedDate) {
             await viewModel.load(day: navigation.selectedDate)
         }
@@ -34,14 +41,40 @@ public struct DailyView: View {
     @ViewBuilder
     private var listContent: some View {
         if viewModel.isEmpty {
-            DailyEmptyView()
+            DailyEmptyView(onPrevious: { step(-1) }, onNext: { step(1) })
         } else {
-            List(viewModel.expenses) { expense in
-                ExpenseRow(expense: expense, category: viewModel.category(for: expense))
-                    .listRowBackground(AppColor.surface)
+            List {
+                ForEach(viewModel.expenses) { expense in
+                    ExpenseRow(expense: expense, category: viewModel.category(for: expense))
+                        .listRowBackground(AppColor.surface)
+                        .swipeActions(edge: .trailing) {
+                            Button("삭제", role: .destructive) {
+                                Task { await viewModel.delete(expense) }
+                            }
+                        }
+                }
+                .onMove { offsets, destination in
+                    Task { await viewModel.move(from: offsets, to: destination) }
+                }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
         }
+    }
+
+    @ViewBuilder
+    private var undoBar: some View {
+        if viewModel.pendingUndo != nil {
+            UndoSnackbar {
+                Task { await viewModel.undoDelete() }
+            }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.bottom, AppSpacing.lg)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
+    private func step(_ days: Int) {
+        navigation.selectedDate = CalendarDay.adding(days: days, to: navigation.selectedDate)
     }
 }
