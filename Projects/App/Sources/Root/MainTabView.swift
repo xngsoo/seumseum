@@ -1,4 +1,5 @@
 import SwiftUI
+import Monthly
 import DesignSystem
 import Domain
 import Persistence
@@ -42,7 +43,7 @@ struct MainTabView: View {
                 categoryRepository: stack.categories
             )
         case .monthly:
-            PlaceholderScreen(title: "달력", detail: "탭 2 — 월 그리드와 일별 합계")
+            MonthlyView(expenseRepository: stack.expenses)
         case .statistics:
             PlaceholderScreen(title: "통계", detail: "탭 3 — 급여 주기별 분석")
         case .settings:

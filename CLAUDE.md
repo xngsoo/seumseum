@@ -47,10 +47,13 @@ SwiftUI + SwiftData, Tuist 멀티모듈. 아이폰 전용(세로 모드만), 최
 - 정렬: 같은 날짜 안에서 `sortOrder` 오름차순. 조회는 정렬된 상태로 반환한다
 - 불변식: 한 날짜의 항목은 항상 `sortOrder`가 0…n-1. 추가·삭제·재정렬 모두 이 상태를 유지한다
 - 신규 항목은 0번에 삽입해 맨 위에 온다. 삭제 취소는 원래 인덱스로 되돌린다
+- 수정으로 날짜가 바뀌면 이전 날짜와 새 날짜를 모두 다시 매기고, 항목은 새 날짜의 0번에 놓는다
 - 순서 변경은 바뀐 순서의 ID 배열만 넘긴다. `sortOrder` 값 계산은 저장소가 하고,
   호출부는 숫자를 만들지 않는다. `Expense.sortOrder`를 채워 넘겨도 저장소가 다시 매긴다
 - `ExpenseRepository`: `insert(_:at:)`, `delete(id:) -> Int`, `reorder(_ orderedIDs:on:)`.
   `CategoryRepository`는 전역 목록이라 날짜 인자가 없다 (`reorder(_ orderedIDs:)`)
+- 카테고리는 최대 `ExpenseCategory.maxCount`(12)개. 추가 화면에 4열 × 3줄로 모두 보이게 하기 위함이다.
+  기본 8개 + 사용자 추가 4개. 제한은 저장소의 `insert`에서 강제한다
 - 금액 축약 표기(`AmountFormatter.short`):
   - 10,000 미만 → 그대로 (`9800원`)
   - 10,000 이상 → 만 단위 소수 1자리 버림, 소수부가 0이면 생략 (`10만원`, `11.3만원`, `153.5만원`)
