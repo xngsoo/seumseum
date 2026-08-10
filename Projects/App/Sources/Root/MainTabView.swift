@@ -2,6 +2,7 @@ import SwiftUI
 import DesignSystem
 import Domain
 import Persistence
+import Daily
 
 struct MainTabView: View {
     let stack: PersistenceStack
@@ -31,7 +32,10 @@ struct MainTabView: View {
     private var screen: some View {
         switch navigation.selectedTab {
         case .daily:
-            PlaceholderScreen(title: "일별", detail: "탭 1 — 그날의 소비 내역")
+            DailyView(
+                expenseRepository: stack.expenses,
+                categoryRepository: stack.categories
+            )
         case .monthly:
             PlaceholderScreen(title: "달력", detail: "탭 2 — 월 그리드와 일별 합계")
         case .statistics:
