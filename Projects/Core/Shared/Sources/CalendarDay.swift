@@ -75,4 +75,18 @@ public extension CalendarDay {
         let weekday = calendar.component(.weekday, from: day)
         return weekday == 1 || weekday == 7
     }
+    
+    /// 화면 상단의 날짜 표기
+    static func headerText(_ day: Date) -> String {
+        return headerFormatter.string(from: day)
+    }
+    
+    private static let headerFormatter : DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "M월 d일 (E)"
+        return formatter
+    }()
 }

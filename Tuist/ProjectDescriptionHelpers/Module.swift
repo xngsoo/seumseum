@@ -119,7 +119,8 @@ public extension Project {
             ]),
             sources: ["Sources/**"],
             resources: ["Resources/**"],
-            dependencies: dependencies
+            dependencies: dependencies,
+            launchArguments: [.launchArgument(name: "-seedSampleData", isEnabled: false)]
         )
         
         return Project(

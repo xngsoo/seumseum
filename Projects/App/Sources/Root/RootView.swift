@@ -37,7 +37,11 @@ struct RootView: View {
 
     private func bootstrap() async {
         do {
-            phase = .ready(try await PersistenceStack())
+            let stack = try await PersistenceStack()
+            #if DEBUG
+            try await SampleData.seedIfRequested(into: stack)
+            #endif
+            phase = .ready(stack)
         } catch {
             phase = .failed(error.localizedDescription)
         }
