@@ -99,3 +99,34 @@ public extension Project {
         )
     }
 }
+
+// 앱 타겟 조립
+public extension Project {
+    static func app(dependencies: [TargetDependency]) -> Project {
+        let appTarget: Target = .target(
+            name: AppEnvironment.appName,
+            destinations: AppEnvironment.destinations,
+            product: .app,
+            bundleId: AppEnvironment.bundlePrefix,
+            deploymentTargets: AppEnvironment.deploymentTargets,
+            infoPlist: .extendingDefault(with: [
+                "CFBundleDisplayName": "씀씀",
+                "CFBundleShortVersionString": "1.0.0",
+                "CFBundleVersion": "1",
+                "UILaunchScreen": [:],
+                "UISupportedInterfaceOrientations": ["UIInterfaceOrientationPortrait"],
+                "UIUserInterfaceStyle": "Automatic",
+            ]),
+            sources: ["Sources/**"],
+            resources: ["Resources/**"],
+            dependencies: dependencies
+        )
+        
+        return Project(
+            name: AppEnvironment.appName,
+            organizationName: AppEnvironment.organizationName,
+            settings: .settings(base: baseSettings),
+            targets: [appTarget]
+        )
+    }
+}
