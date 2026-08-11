@@ -43,27 +43,23 @@ public struct DailyView: View {
         if viewModel.isEmpty {
             DailyEmptyView(onPrevious: { step(-1) }, onNext: { step(1) })
         } else {
-            List {
-                ForEach(viewModel.expenses) { expense in
-                    ExpenseRow(expense: expense, category: viewModel.category(for: expense))
-                        .listRowBackground(AppColor.surface)
-                        .contentShape(Rectangle())
-                        .onTapGesture { navigation.presentEditor(for: expense) }
-                        .swipeActions(edge: .trailing) {
-                            Button("삭제", role: .destructive) {
-                                Task {
-                                    await viewModel.delete(expense)
-                                    navigation.dataDidChange()
-                                }
-                            }
-                        }
+            ExpenseListView(
+                expenses: viewModel.expenses,
+                categories: viewModel.categories,
+                onSelect: { navigation.presentEditor(for: $0) },
+                onDelete: { expense in
+                    Task {
+                        await viewModel.delete(expense)
+                        navigation.dataDidChange()
+                    }
+                },
+                onMove: { source, destination in
+                    viewModel.moveLocally(from: source, to: destination)
+                },
+                onMoveEnded: {
+                    Task { await viewModel.commitReorder() }
                 }
-                .onMove { offsets, destination in
-                    Task { await viewModel.move(from: offsets, to: destination) }
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
+            )
         }
     }
 

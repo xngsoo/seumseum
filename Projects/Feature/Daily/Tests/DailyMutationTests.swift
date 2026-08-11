@@ -36,6 +36,44 @@ struct DailyMutationTests {
         #expect(stored?.map(\.sortOrder) == [0, 1, 2])
     }
 
+    @Test("드래그 중에는 화면 순서만 바뀌고 저장은 손을 뗄 때 한 번만 한다")
+    func moveLocallyDefersSaving() async {
+        let (viewModel, repository) = await makeViewModel(["A", "B", "C"])
+
+        viewModel.moveLocally(from: 2, to: 1)
+        viewModel.moveLocally(from: 1, to: 0)
+
+        #expect(viewModel.expenses.map(\.memo) == ["C", "A", "B"])
+        var stored = try? await repository.expenses(on: day)
+        #expect(stored?.map(\.memo) == ["A", "B", "C"])
+
+        await viewModel.commitReorder()
+
+        stored = try? await repository.expenses(on: day)
+        #expect(stored?.map(\.memo) == ["C", "A", "B"])
+        #expect(stored?.map(\.sortOrder) == [0, 1, 2])
+    }
+
+    @Test("드래그 저장이 실패하면 드래그 시작 전 순서로 되돌린다")
+    func commitReorderFailureRollsBack() async {
+        let categoryID = UUID()
+        let seeded = ["A", "B", "C"].enumerated().map { index, memo in
+            Expense(amount: 1_000, memo: memo, categoryID: categoryID, date: day, sortOrder: index)
+        }
+        let viewModel = DailyViewModel(
+            expenseRepository: FailingReorderRepository(seeded),
+            categoryRepository: StubCategoryRepository(categories: [])
+        )
+        await viewModel.load(day: day)
+
+        viewModel.moveLocally(from: 2, to: 1)
+        viewModel.moveLocally(from: 1, to: 0)
+        await viewModel.commitReorder()
+
+        #expect(viewModel.expenses.map(\.memo) == ["A", "B", "C"])
+        #expect(viewModel.errorMessage != nil)
+    }
+
     @Test("삭제하면 목록에서 빠지고 취소 정보가 남는다")
     func delete() async {
         let (viewModel, _) = await makeViewModel(["A", "B", "C"])
