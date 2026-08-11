@@ -334,3 +334,67 @@ struct SplitItemTests {
         #expect(!viewModel.showsSplitField)
     }
 }
+
+@MainActor
+@Suite("키패드 입력")
+struct KeypadInputTests {
+
+    private func makeViewModel() -> ExpenseEditorViewModel {
+        ExpenseEditorViewModel(
+            route: .create(day: CalendarDay.today()),
+            expenseRepository: NoopExpenseRepository(),
+            categoryRepository: NoopCategoryRepository(),
+            settingsRepository: FixedSettingsRepository()
+        )
+    }
+
+    @Test("숫자를 이어 붙인다")
+    func append() {
+        let viewModel = makeViewModel()
+        for key in ["1", "2", "0", "00"] { viewModel.appendDigits(key) }
+        #expect(viewModel.amountDigits == "12000")
+        #expect(viewModel.amount == 12_000)
+        #expect(viewModel.groupedAmount == "12,000")
+    }
+
+    @Test("비어 있을 때 0 이나 00 은 쌓이지 않는다")
+    func leadingZeros() {
+        let viewModel = makeViewModel()
+        viewModel.appendDigits("0")
+        viewModel.appendDigits("00")
+        #expect(viewModel.amountDigits.isEmpty)
+
+        viewModel.appendDigits("5")
+        viewModel.appendDigits("00")
+        #expect(viewModel.amountDigits == "500")
+    }
+
+    @Test("한 자리씩 지운다")
+    func delete() {
+        let viewModel = makeViewModel()
+        viewModel.appendDigits("123")
+        viewModel.deleteLastDigit()
+        #expect(viewModel.amountDigits == "12")
+
+        viewModel.deleteLastDigit()
+        viewModel.deleteLastDigit()
+        viewModel.deleteLastDigit()   // 빈 상태에서 눌러도 안전
+        #expect(viewModel.amountDigits.isEmpty)
+        #expect(viewModel.amount == .zero)
+    }
+
+    @Test("전체 삭제")
+    func clear() {
+        let viewModel = makeViewModel()
+        viewModel.appendDigits("98765")
+        viewModel.clearAmount()
+        #expect(viewModel.amountDigits.isEmpty)
+    }
+
+    @Test("최대 자릿수를 넘기지 않는다")
+    func maxDigits() {
+        let viewModel = makeViewModel()
+        for _ in 0 ..< 20 { viewModel.appendDigits("9") }
+        #expect(viewModel.amountDigits.count == ExpenseEditorViewModel.maxDigits)
+    }
+}

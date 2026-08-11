@@ -130,7 +130,28 @@ public final class ExpenseEditorViewModel {
     public func updateAmount(_ raw: String) {
         let filtered = raw.filter(\.isNumber)
         let trimmed = String(filtered.drop { $0 == "0" })
-        amountDigits = String(trimmed.prefix(12))
+        amountDigits = String(trimmed.prefix(Self.maxDigits))
+    }
+
+    // MARK: - 키패드 입력
+
+    public static let maxDigits = 12
+
+    /// `1` 이나 `00` 처럼 한 번에 여러 자리를 붙일 수 있다.
+    public func appendDigits(_ digits: String) {
+        guard !digits.isEmpty else { return }
+        // 아무것도 없을 때 `00` 을 누르면 0 만 쌓이므로 무시한다.
+        if amountDigits.isEmpty, digits.allSatisfy({ $0 == "0" }) { return }
+        updateAmount(amountDigits + digits)
+    }
+
+    public func deleteLastDigit() {
+        guard !amountDigits.isEmpty else { return }
+        amountDigits.removeLast()
+    }
+
+    public func clearAmount() {
+        amountDigits = ""
     }
 
     @discardableResult
