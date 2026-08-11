@@ -31,10 +31,9 @@ struct CategoryPicker: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(isSelected ? .white : AppColor.category(category.colorToken))
                     .frame(width: 44, height: 44)
+                    // 카드 안에 놓이므로 고르지 않은 칸은 배경을 비운다.
                     .background(
-                        isSelected
-                            ? AppColor.category(category.colorToken)
-                            : AppColor.surface,
+                        isSelected ? AppColor.category(category.colorToken) : .clear,
                         in: RoundedRectangle(cornerRadius: AppSpacing.md)
                     )
                 Text(category.name)

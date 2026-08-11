@@ -22,82 +22,80 @@ struct CategoryEditorView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ScreenHeader(viewModel.title, style: .sheet, leading: .close { dismiss() })
+
             ScrollView {
-                VStack(alignment: .leading, spacing: AppSpacing.xl) {
+                VStack(spacing: AppSpacing.lg) {
                     preview
                     nameSection
                     colorSection
                     symbolSection
                 }
-                .padding(AppSpacing.screenMargin)
+                .padding(.horizontal, AppSpacing.screenMargin)
+                .padding(.vertical, AppSpacing.lg)
             }
-            .background(AppColor.background)
-            .navigationTitle(viewModel.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("취소") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("저장") { save() }.disabled(!viewModel.canSave)
-                }
-            }
-            .alert("저장하지 못했습니다", isPresented: $viewModel.isErrorPresented) {
-                Button("확인", role: .cancel) {}
-            } message: {
-                Text(viewModel.errorMessage ?? "")
-            }
-            .task { isNameFocused = true }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
         }
-    }
-
-    private func save() {
-        Task {
-            if await viewModel.save() {
-                onSaved()
-                dismiss()
-            }
+        .background(AppColor.background)
+        .safeAreaInset(edge: .bottom) { saveButton }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .alert("저장하지 못했습니다", isPresented: $viewModel.isErrorPresented) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
+        .task {
+            // 수정할 때는 이미 이름이 있으니 키보드를 띄우지 않는다. 새로 만들 때만 바로 입력받는다.
+            guard !viewModel.isEditing else { return }
+            isNameFocused = true
         }
     }
 
     /// 지금 고른 색·아이콘·이름이 실제로 어떻게 보이는지 위에서 바로 확인한다.
     private var preview: some View {
-        HStack(spacing: AppSpacing.md) {
+        VStack(spacing: AppSpacing.md) {
             Image(systemName: viewModel.symbolName)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 26, weight: .semibold))
                 .foregroundStyle(.white)
-                .frame(width: 52, height: 52)
+                .frame(width: 64, height: 64)
                 .background(
                     AppColor.category(viewModel.colorToken),
-                    in: RoundedRectangle(cornerRadius: AppSpacing.md)
+                    in: RoundedRectangle(cornerRadius: AppSpacing.lg)
                 )
             Text(viewModel.name.isEmpty ? "이름 없음" : viewModel.name)
                 .font(AppFont.screenTitle)
                 .foregroundStyle(
                     viewModel.name.isEmpty ? AppColor.textSecondary : AppColor.textPrimary
                 )
-            Spacer()
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(AppSpacing.md)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, AppSpacing.lg)
         .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
     }
 
     private var nameSection: some View {
-        EditorSection(title: "이름") {
+        LabeledSection("이름") {
             TextField("예: 식비", text: $viewModel.name)
                 .font(AppFont.rowTitle)
+                .foregroundStyle(AppColor.textPrimary)
                 .focused($isNameFocused)
                 .submitLabel(.done)
                 .onSubmit { isNameFocused = false }
-                .padding(AppSpacing.md)
-                .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.sm))
+                .padding(.horizontal, AppSpacing.lg)
+                .frame(height: 52)
+                .background(
+                    AppColor.surface,
+                    in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+                )
         }
     }
 
     private var colorSection: some View {
-        EditorSection(title: "색상") {
+        LabeledSection("색상") {
             LazyVGrid(
                 columns: Array(repeating: GridItem(.flexible(), spacing: AppSpacing.sm), count: 8),
                 spacing: AppSpacing.sm
@@ -108,10 +106,12 @@ struct CategoryEditorView: View {
                     } label: {
                         Circle()
                             .fill(AppColor.category(token))
-                            .frame(height: 32)
+                            .frame(height: 30)
                             .overlay {
                                 if viewModel.colorToken == token {
-                                    Circle().strokeBorder(AppColor.textPrimary, lineWidth: 2)
+                                    Circle()
+                                        .strokeBorder(AppColor.textPrimary, lineWidth: 2)
+                                        .padding(-4)
                                 }
                             }
                     }
@@ -120,14 +120,21 @@ struct CategoryEditorView: View {
                     .accessibilityAddTraits(viewModel.colorToken == token ? [.isSelected] : [])
                 }
             }
+            .padding(.horizontal, AppSpacing.lg)
+            .padding(.vertical, AppSpacing.lg)
+            .frame(maxWidth: .infinity)
+            .background(
+                AppColor.surface,
+                in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+            )
         }
     }
 
     private var symbolSection: some View {
-        EditorSection(title: "아이콘") {
+        LabeledSection("아이콘") {
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: AppSpacing.sm), count: 6),
-                spacing: AppSpacing.sm
+                columns: Array(repeating: GridItem(.flexible(), spacing: AppSpacing.xs), count: 6),
+                spacing: AppSpacing.xs
             ) {
                 ForEach(CategorySymbols.all, id: \.self) { symbol in
                     Button {
@@ -136,14 +143,14 @@ struct CategoryEditorView: View {
                         Image(systemName: symbol)
                             .font(.system(size: 17))
                             .foregroundStyle(
-                                viewModel.symbolName == symbol
-                                    ? .white : AppColor.textPrimary
+                                viewModel.symbolName == symbol ? .white : AppColor.textPrimary
                             )
                             .frame(height: 44)
                             .frame(maxWidth: .infinity)
+                            // 카드 안이므로 고르지 않은 칸은 배경을 비운다.
                             .background(
                                 viewModel.symbolName == symbol
-                                    ? AppColor.category(viewModel.colorToken) : AppColor.surface,
+                                    ? AppColor.category(viewModel.colorToken) : .clear,
                                 in: RoundedRectangle(cornerRadius: AppSpacing.sm)
                             )
                     }
@@ -152,22 +159,39 @@ struct CategoryEditorView: View {
                     .accessibilityAddTraits(viewModel.symbolName == symbol ? [.isSelected] : [])
                 }
             }
+            .padding(AppSpacing.sm)
+            .background(
+                AppColor.surface,
+                in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+            )
         }
     }
-}
 
-/// 섹션 제목 + 내용. Editor 모듈의 같은 이름 뷰와 별개다(모듈이 다르다).
-struct EditorSection<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
-            Text(title)
-                .font(AppFont.caption)
-                .foregroundStyle(AppColor.textSecondary)
-            content
+    private var saveButton: some View {
+        Button(action: save) {
+            Text(viewModel.isEditing ? "수정 완료" : "저장")
+                .font(AppFont.rowTitle)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, AppSpacing.md)
+                .background(
+                    viewModel.canSave ? AppColor.accent : AppColor.separator,
+                    in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+                )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .disabled(!viewModel.canSave)
+        .padding(.horizontal, AppSpacing.screenMargin)
+        .padding(.top, AppSpacing.sm)
+        .padding(.bottom, AppSpacing.xs)
+        .background(AppColor.background)
+    }
+
+    private func save() {
+        Task {
+            if await viewModel.save() {
+                onSaved()
+                dismiss()
+            }
+        }
     }
 }

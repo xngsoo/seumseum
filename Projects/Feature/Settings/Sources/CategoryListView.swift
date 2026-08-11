@@ -20,7 +20,7 @@ struct CategoryListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SettingsHeader(title: "카테고리 관리", onBack: { dismiss() }) {
+            ScreenHeader("카테고리 관리", style: .subScreen, leading: .back { dismiss() }) {
                 addButton
             }
             Divider().overlay(AppColor.separator)

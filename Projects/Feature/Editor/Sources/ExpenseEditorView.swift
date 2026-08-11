@@ -29,56 +29,70 @@ public struct ExpenseEditorView: View {
     }
 
     public var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            ScreenHeader(viewModel.title, style: .sheet, leading: .close { dismiss() })
+
             // 키패드와 저장 버튼은 항상 고정이고, 넘치는 경우에만 위쪽이 스크롤된다.
             // 카테고리 12개 + 작은 화면 조합에서만 실제로 스크롤이 생긴다.
             ScrollView {
-                VStack(alignment: .leading, spacing: AppSpacing.md) {
-                    amountRow
-                    CategoryPicker(
-                        categories: viewModel.categories,
-                        selection: $viewModel.categoryID
-                    )
+                VStack(spacing: AppSpacing.lg) {
+                    amountCard
+                    categorySection
                     splitSection
-                    detailRows
+                    detailCard
                 }
                 .padding(.horizontal, AppSpacing.screenMargin)
-                .padding(.vertical, AppSpacing.sm)
+                .padding(.vertical, AppSpacing.lg)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
-            .background(AppColor.background)
-            .navigationTitle(viewModel.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("취소") { dismiss() }
-                }
-            }
-            .safeAreaInset(edge: .bottom) { bottomBar }
-            .ignoresSafeArea(.keyboard, edges: .bottom)
-            .task { await viewModel.load() }
         }
+        .background(AppColor.background)
+        .safeAreaInset(edge: .bottom) { bottomBar }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .task { await viewModel.load() }
     }
 
-    // MARK: - 상단
+    // MARK: - 금액
 
-    private var amountRow: some View {
+    private var amountCard: some View {
         HStack(alignment: .firstTextBaseline, spacing: 2) {
             Text(viewModel.groupedAmount.isEmpty ? "0" : viewModel.groupedAmount)
                 .font(AppFont.amountLarge)
                 .foregroundStyle(
                     viewModel.groupedAmount.isEmpty ? AppColor.textSecondary : AppColor.textPrimary
                 )
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             Text("원")
                 .font(AppFont.amountLarge)
                 .foregroundStyle(AppColor.textPrimary)
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, AppSpacing.lg)
+        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("금액 \(viewModel.formattedAmount)")
+    }
+
+    // MARK: - 카테고리
+
+    /// 격자를 카드 하나에 담고 고르지 않은 칸은 배경을 비운다.
+    /// 칸마다 배경을 깔면 카드 안에 카드가 겹친 것처럼 보인다.
+    private var categorySection: some View {
+        LabeledSection("카테고리") {
+            CategoryPicker(
+                categories: viewModel.categories,
+                selection: $viewModel.categoryID
+            )
+            .padding(AppSpacing.md)
+            .background(
+                AppColor.surface,
+                in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+            )
+        }
     }
 
     /// 정액 품목 분리. 설정에서 켠 경우에만 보인다.
@@ -86,35 +100,38 @@ public struct ExpenseEditorView: View {
     @ViewBuilder
     private var splitSection: some View {
         if FeatureFlag.splitItem, viewModel.showsSplitField, let item = viewModel.splitItem {
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                Stepper(value: $viewModel.splitQuantity, in: 0 ... 99) {
-                    HStack {
-                        Text("\(item.name) 분리")
-                            .font(AppFont.rowDetail)
-                            .foregroundStyle(AppColor.textSecondary)
-                        Spacer()
+            LabeledSection("\(item.name) 분리") {
+                VStack(alignment: .leading, spacing: AppSpacing.xs) {
+                    Stepper(value: $viewModel.splitQuantity, in: 0 ... 99) {
                         Text("\(viewModel.splitQuantity)\(item.unitLabel)")
                             .font(AppFont.amount)
                             .foregroundStyle(AppColor.textPrimary)
                     }
-                }
-                .padding(.horizontal, AppSpacing.md)
-                .padding(.vertical, AppSpacing.xs)
-                .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.sm))
+                    .padding(.horizontal, AppSpacing.lg)
+                    .padding(.vertical, AppSpacing.sm)
+                    .background(
+                        AppColor.surface,
+                        in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+                    )
 
-                if let preview = viewModel.splitPreview {
-                    Text(preview)
-                        .font(AppFont.caption)
-                        .foregroundStyle(
-                            viewModel.isSplitAmountValid ? AppColor.accent : AppColor.category(.red)
-                        )
+                    if let preview = viewModel.splitPreview {
+                        Text(preview)
+                            .font(AppFont.caption)
+                            .foregroundStyle(
+                                viewModel.isSplitAmountValid
+                                    ? AppColor.accent : AppColor.category(.red)
+                            )
+                            .padding(.horizontal, AppSpacing.xs)
+                    }
                 }
             }
         }
     }
 
-    /// 날짜와 내용은 한 줄씩. 값이 항상 보이므로 저장 직전에 확인할 수 있다.
-    private var detailRows: some View {
+    // MARK: - 날짜와 내용
+
+    /// 값이 항상 보이므로 저장 직전에 확인할 수 있다.
+    private var detailCard: some View {
         VStack(spacing: 0) {
             HStack {
                 Text("날짜")
@@ -128,26 +145,28 @@ public struct ExpenseEditorView: View {
                     .environment(\.timeZone, CalendarDay.calendar.timeZone)
                     .environment(\.locale, CalendarDay.locale)
             }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.xs)
+            .padding(.horizontal, AppSpacing.lg)
+            .frame(height: 52)
 
-            Divider().overlay(AppColor.separator)
+            Divider()
+                .overlay(AppColor.separator)
+                .padding(.leading, AppSpacing.lg)
 
-            HStack {
+            HStack(spacing: AppSpacing.md) {
                 Text("내용")
                     .font(AppFont.rowDetail)
                     .foregroundStyle(AppColor.textSecondary)
                 CaretEndTextField("어디에 썼나요?", text: $viewModel.memo, alignment: .right)
             }
-            .padding(.horizontal, AppSpacing.md)
-            .padding(.vertical, AppSpacing.sm)
+            .padding(.horizontal, AppSpacing.lg)
+            .frame(height: 52)
         }
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.sm))
+        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
     }
 
     // MARK: - 하단
 
-    /// 메모를 입력할 때는 시스템 키보드가 올라오므로 키패드를 감춘다.
+    /// 메모를 입력할 때는 시스템 키보드가 키패드를 가린다.
     /// 저장 버튼은 두 경우 모두 남아 위치가 흔들리지 않는다.
     private var bottomBar: some View {
         VStack(spacing: AppSpacing.sm) {
@@ -159,7 +178,8 @@ public struct ExpenseEditorView: View {
             saveButton
         }
         .padding(.horizontal, AppSpacing.screenMargin)
-        .padding(.vertical, AppSpacing.sm)
+        .padding(.top, AppSpacing.sm)
+        .padding(.bottom, AppSpacing.xs)
         .background(AppColor.background)
     }
 

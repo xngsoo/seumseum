@@ -27,7 +27,7 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                SettingsHeader(title: "설정")
+                ScreenHeader("설정")
                 Divider().overlay(AppColor.separator)
 
                 ScrollView {
