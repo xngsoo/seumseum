@@ -7,7 +7,6 @@ public struct ExpenseEditorView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: ExpenseEditorViewModel
-    @FocusState private var isMemoFocused: Bool
 
     private let onSaved: () -> Void
 
@@ -137,12 +136,7 @@ public struct ExpenseEditorView: View {
                 Text("내용")
                     .font(AppFont.rowDetail)
                     .foregroundStyle(AppColor.textSecondary)
-                TextField("어디에 썼나요?", text: $viewModel.memo)
-                    .font(AppFont.rowTitle)
-                    .multilineTextAlignment(.trailing)
-                    .focused($isMemoFocused)
-                    .submitLabel(.done)
-                    .onSubmit { isMemoFocused = false }
+                CaretEndTextField("어디에 썼나요?", text: $viewModel.memo, alignment: .right)
             }
             .padding(.horizontal, AppSpacing.md)
             .padding(.vertical, AppSpacing.sm)

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Shared
 
 public enum AppColor {
@@ -21,4 +22,6 @@ public enum AppColor {
         case .gray: DesignSystemAsset.categoryGray.swiftUIColor
         }
     }
+    
+    public static var uiTextPrimary: UIColor { DesignSystemAsset.textPrimary.color }
 }
