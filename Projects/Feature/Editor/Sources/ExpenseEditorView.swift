@@ -82,9 +82,10 @@ public struct ExpenseEditorView: View {
     }
 
     /// 정액 품목 분리. 설정에서 켠 경우에만 보인다.
+    /// 기능이 보류 중이라 `FeatureFlag.splitItem` 이 꺼져 있으면 아예 그리지 않는다.
     @ViewBuilder
     private var splitSection: some View {
-        if viewModel.showsSplitField, let item = viewModel.splitItem {
+        if FeatureFlag.splitItem, viewModel.showsSplitField, let item = viewModel.splitItem {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Stepper(value: $viewModel.splitQuantity, in: 0 ... 99) {
                     HStack {

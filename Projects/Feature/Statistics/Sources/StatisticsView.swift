@@ -60,6 +60,7 @@ public struct StatisticsView: View {
                 .padding(AppSpacing.md)
             }
             .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         }
     }
 }

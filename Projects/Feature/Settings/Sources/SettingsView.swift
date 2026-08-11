@@ -6,6 +6,7 @@ import Shared
 public struct SettingsView: View {
     @Environment(AppNavigation.self) private var navigation
     @State private var viewModel: SettingsViewModel
+    @State private var isCategoryListPresented = false
 
     private let categoryRepository: any CategoryRepository
 
@@ -25,16 +26,25 @@ public struct SettingsView: View {
 
     public var body: some View {
         NavigationStack {
-            List {
-                categorySection
-                payPeriodSection
-                //comingSoonSection
-                dataSection
+            VStack(spacing: 0) {
+                SettingsHeader(title: "설정")
+                Divider().overlay(AppColor.separator)
+
+                ScrollView {
+                    VStack(spacing: AppSpacing.xl) {
+                        categorySection
+                        payPeriodSection
+                        dataSection
+                    }
+                    .padding(.vertical, AppSpacing.lg)
+                }
+                .scrollIndicators(.hidden)
             }
-            .listStyle(.insetGrouped)
-            .scrollContentBackground(.hidden)
             .background(AppColor.background)
-            .navigationTitle("설정")
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $isCategoryListPresented) {
+                CategoryListView(categoryRepository: categoryRepository)
+            }
             .task { await viewModel.load() }
             .alert("통계 기준이 바뀝니다", isPresented: $viewModel.isNoticePresented) {
                 Button("확인", role: .cancel) {}
@@ -64,99 +74,95 @@ public struct SettingsView: View {
         }
     }
 
+    // MARK: - 분류
+
+    /// 품목 분리는 보류 중이라 `FeatureFlag.splitItem` 이 켜질 때만 진입점을 둔다.
+    private var categorySection: some View {
+        SettingsSection("분류") {
+            SettingsRow(
+                "카테고리 관리",
+                systemImage: "square.grid.2x2",
+                showsSeparator: false,
+                showsChevron: true,
+                action: { isCategoryListPresented = true }
+            )
+        }
+    }
+
+    // MARK: - 급여 주기
+
     private var payPeriodSection: some View {
-        Section {
-            Toggle("급여일 사용", isOn: paydayBinding)
-                .tint(AppColor.accent)
+        SettingsSection("급여 주기") {
+            SettingsRow("급여일 사용", showsSeparator: viewModel.isPaydayEnabled) {
+                Toggle("", isOn: paydayBinding)
+                    .labelsHidden()
+                    .tint(AppColor.accent)
+            }
 
             if viewModel.isPaydayEnabled {
-                Picker("급여일", selection: dayBinding) {
-                    ForEach(PaydayDay.pickerOptions, id: \.self) { day in
-                        Text(day.title).tag(day)
+                SettingsRow("급여일") {
+                    menu(title: viewModel.paydayDay.title) {
+                        Picker("급여일", selection: dayBinding) {
+                            ForEach(PaydayDay.pickerOptions, id: \.self) { day in
+                                Text(day.title).tag(day)
+                            }
+                        }
                     }
                 }
-                Picker("지급일 보정", selection: adjustmentBinding) {
-                    ForEach(PaydayAdjustment.allCases, id: \.self) { rule in
-                        Text(rule.title).tag(rule)
+                SettingsRow("지급일 보정", showsSeparator: false) {
+                    menu(title: viewModel.adjustment.title) {
+                        Picker("지급일 보정", selection: adjustmentBinding) {
+                            ForEach(PaydayAdjustment.allCases, id: \.self) { rule in
+                                Text(rule.title).tag(rule)
+                            }
+                        }
                     }
                 }
             }
-        } header: {
-            Text("급여 주기")
         } footer: {
             VStack(alignment: .leading, spacing: AppSpacing.xs) {
                 Text(viewModel.previewCaption)
                     .foregroundStyle(AppColor.accent)
-                Text("월급날을 기준으로 한 달을 묶어 통계를 봅니다. 일별·달력 화면은 그대로 달력 기준입니다.")
-            }
-            .font(AppFont.caption)
-        }
-        .listRowBackground(AppColor.surface)
-    }
-
-    private var categorySection: some View {
-        Section("분류") {
-            NavigationLink {
-                CategoryListView(categoryRepository: categoryRepository)
-            } label: {
-                Label("카테고리 관리", systemImage: "square.grid.2x2")
-            }
-
-            NavigationLink {
-                SplitItemView(
-                    initial: viewModel.splitItem,
-                    categoryRepository: categoryRepository,
-                    onSave: { item in Task { await viewModel.setSplitItem(item) } }
-                )
-            } label: {
-                LabeledContent {
-                    Text(viewModel.splitSummary)
-                        .font(AppFont.rowDetail)
-                        .foregroundStyle(AppColor.textSecondary)
-                } label: {
-                    Label("품목 분리", systemImage: "arrow.triangle.branch")
-                }
+                Text("월급날을 기준으로 한 달을 묶어 통계를 봅니다.\n일별·달력 화면은 그대로 달력 기준입니다.")
             }
         }
-        .listRowBackground(AppColor.surface)
     }
 
-    private var comingSoonSection: some View {
-        Section("준비 중") {
-            ForEach(["통화 표시", "기록 리마인더", "CSV 내보내기", "앱 잠금"], id: \.self) { title in
-                HStack {
-                    Text(title)
-                        .foregroundStyle(AppColor.textSecondary)
-                    Spacer()
-                    Text("곧 지원")
-                        .font(AppFont.caption)
-                        .foregroundStyle(AppColor.textSecondary)
-                }
+    private func menu(title: String, @ViewBuilder content: () -> some View) -> some View {
+        Menu {
+            content()
+        } label: {
+            HStack(spacing: AppSpacing.xs) {
+                Text(title)
+                    .font(AppFont.rowDetail)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
             }
+            .foregroundStyle(AppColor.textSecondary)
         }
-        .listRowBackground(AppColor.surface)
     }
+
+    // MARK: - 데이터
 
     private var dataSection: some View {
-        Section {
-            Button(role: .destructive) {
-                viewModel.isResetConfirmPresented = true
-            } label: {
-                HStack {
-                    Text("데이터 초기화")
-                    Spacer()
-                    if viewModel.isResetting { ProgressView() }
+        SettingsSection("데이터") {
+            SettingsRow(
+                "데이터 초기화",
+                titleColor: AppColor.category(.red),
+                showsSeparator: false,
+                action: {
+                    guard !viewModel.isResetting else { return }
+                    viewModel.isResetConfirmPresented = true
                 }
+            ) {
+                if viewModel.isResetting { ProgressView() }
             }
-            .disabled(viewModel.isResetting)
-        } header: {
-            Text("데이터")
         } footer: {
             Text("지출 기록을 모두 지웁니다. 카테고리와 설정은 남습니다.")
-                .font(AppFont.caption)
         }
-        .listRowBackground(AppColor.surface)
     }
+
+    // MARK: - 바인딩
 
     private var paydayBinding: Binding<Bool> {
         Binding(

@@ -6,6 +6,8 @@ import Shared
 public struct DailyView: View {
     @Environment(AppNavigation.self) private var navigation
     @State private var viewModel: DailyViewModel
+    /// 아이콘 36 + 위아래 여백. 글자 크기 설정을 따라간다.
+    @ScaledMetric(relativeTo: .body) private var rowHeight: CGFloat = 68
 
     public init(
         expenseRepository: any ExpenseRepository,
@@ -43,9 +45,9 @@ public struct DailyView: View {
         if viewModel.isEmpty {
             DailyEmptyView(onPrevious: { step(-1) }, onNext: { step(1) })
         } else {
-            ExpenseListView(
-                expenses: viewModel.expenses,
-                categories: viewModel.categories,
+            ReorderableList(
+                viewModel.expenses,
+                rowHeight: rowHeight,
                 onSelect: { navigation.presentEditor(for: $0) },
                 onDelete: { expense in
                     Task {
@@ -59,7 +61,9 @@ public struct DailyView: View {
                 onMoveEnded: {
                     Task { await viewModel.commitReorder() }
                 }
-            )
+            ) { expense in
+                ExpenseRow(expense: expense, category: viewModel.category(for: expense))
+            }
         }
     }
 

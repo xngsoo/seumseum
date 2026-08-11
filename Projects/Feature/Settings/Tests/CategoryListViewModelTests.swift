@@ -52,6 +52,42 @@ struct CategoryListViewModelTests {
         #expect(viewModel.categories.map(\.sortOrder) == [0, 1, 2])
     }
 
+    @Test("드래그 중에는 화면 순서만 바뀌고 저장은 손을 뗄 때 한 번만 한다")
+    func moveLocallyDefersSaving() async {
+        let repository = FakeCategoryRepository(makeCategories(["A", "B", "C"]))
+        let viewModel = CategoryListViewModel(categoryRepository: repository)
+        await viewModel.load()
+
+        viewModel.moveLocally(from: 2, to: 1)
+        viewModel.moveLocally(from: 1, to: 0)
+
+        #expect(viewModel.categories.map(\.name) == ["C", "A", "B"])
+        var stored = try? await repository.categories()
+        #expect(stored?.map(\.name) == ["A", "B", "C"])
+
+        await viewModel.commitReorder()
+
+        stored = try? await repository.categories()
+        #expect(stored?.map(\.name) == ["C", "A", "B"])
+        #expect(stored?.map(\.sortOrder) == [0, 1, 2])
+    }
+
+    @Test("드래그 저장이 실패하면 드래그 시작 전 순서로 되돌린다")
+    func commitReorderFailureRollsBack() async {
+        let repository = FakeCategoryRepository(
+            makeCategories(["A", "B", "C"]), failure: .storageFailed("실패")
+        )
+        let viewModel = CategoryListViewModel(categoryRepository: repository)
+        await viewModel.load()
+
+        viewModel.moveLocally(from: 2, to: 1)
+        viewModel.moveLocally(from: 1, to: 0)
+        await viewModel.commitReorder()
+
+        #expect(viewModel.categories.map(\.name) == ["A", "B", "C"])
+        #expect(viewModel.isErrorPresented)
+    }
+
     @Test("순서 변경이 실패하면 이전 순서로 되돌리고 알린다")
     func moveFailure() async {
         let repository = FakeCategoryRepository(
