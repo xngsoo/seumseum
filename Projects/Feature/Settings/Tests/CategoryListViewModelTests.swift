@@ -109,35 +109,117 @@ struct CategoryListViewModelTests {
         await viewModel.load()
         let target = viewModel.categories[1]
 
-        await viewModel.delete(target)
+        await viewModel.requestDelete(target)
 
         #expect(viewModel.categories.map(\.name) == ["식비"])
         #expect(!viewModel.isErrorPresented)
     }
 
-    @Test("기본 카테고리를 지우면 사용자에게 이유를 알린다")
+    @Test("기본 카테고리도 삭제된다")
     func deleteBuiltIn() async {
         let repository = FakeCategoryRepository(makeCategories(["식비", "교통"]))
         let viewModel = CategoryListViewModel(categoryRepository: repository)
         await viewModel.load()
         let builtIn = viewModel.categories[0]
 
-        await viewModel.delete(builtIn)
+        await viewModel.requestDelete(builtIn)
+
+        #expect(viewModel.pendingDeletion == nil, "쓰는 지출이 없으면 묻지 않는다")
+        #expect(!viewModel.isErrorPresented)
+        #expect(viewModel.categories.map(\.name) == ["교통"])
+    }
+
+    @Test("쓰고 있는 지출이 있으면 바로 지우지 않고 건수와 함께 확인받는다")
+    func deleteInUseAsksFirst() async {
+        let categories = makeCategories(["식비", "교통"])
+        let repository = FakeCategoryRepository(
+            categories, expenseCounts: [categories[0].id: 3]
+        )
+        let viewModel = CategoryListViewModel(categoryRepository: repository)
+        await viewModel.load()
+        let target = viewModel.categories[0]
+
+        await viewModel.requestDelete(target)
+
+        #expect(viewModel.pendingDeletion?.category.id == target.id)
+        #expect(viewModel.pendingDeletion?.expenseCount == 3)
+        #expect(viewModel.deletionMessage.contains("3건"))
+        #expect(viewModel.categories.count == 2, "확인 전에는 그대로다")
+
+        await viewModel.confirmDeletion()
+
+        #expect(viewModel.pendingDeletion == nil)
+        #expect(viewModel.categories.map(\.name) == ["교통"])
+    }
+
+    /// 확인 창은 닫히면서 취소를 부른다. 대상을 먼저 꺼내 두지 않으면 삭제가 통째로 사라진다.
+    @Test("대상을 꺼낸 뒤에는 취소가 뒤따라도 삭제된다")
+    func takenTargetSurvivesCancel() async throws {
+        let categories = makeCategories(["식비", "교통"])
+        let repository = FakeCategoryRepository(
+            categories, expenseCounts: [categories[0].id: 2]
+        )
+        let viewModel = CategoryListViewModel(categoryRepository: repository)
+        await viewModel.load()
+        await viewModel.requestDelete(viewModel.categories[0])
+
+        let target = try #require(viewModel.takePendingDeletion())
+        viewModel.cancelDeletion()
+        await viewModel.delete(target)
+
+        #expect(viewModel.categories.map(\.name) == ["교통"])
+        #expect(!viewModel.isErrorPresented)
+    }
+
+    @Test("확인 창을 닫으면 아무것도 지우지 않는다")
+    func cancelDeletion() async {
+        let categories = makeCategories(["식비", "교통"])
+        let repository = FakeCategoryRepository(
+            categories, expenseCounts: [categories[0].id: 1]
+        )
+        let viewModel = CategoryListViewModel(categoryRepository: repository)
+        await viewModel.load()
+
+        await viewModel.requestDelete(viewModel.categories[0])
+        viewModel.cancelDeletion()
+
+        #expect(viewModel.pendingDeletion == nil)
+        #expect(viewModel.categories.count == 2)
+    }
+
+    @Test("마지막 하나를 지우면 사용자에게 이유를 알린다")
+    func deleteLast() async {
+        let repository = FakeCategoryRepository(makeCategories(["식비"]))
+        let viewModel = CategoryListViewModel(categoryRepository: repository)
+        await viewModel.load()
+
+        await viewModel.requestDelete(viewModel.categories[0])
 
         #expect(viewModel.isErrorPresented)
-        #expect(viewModel.errorMessage == "기본 카테고리는 삭제할 수 없습니다.")
-        #expect(viewModel.categories.count == 2, "목록은 그대로다")
+        #expect(viewModel.errorMessage == "카테고리는 하나 이상 있어야 합니다.")
+        #expect(viewModel.categories.count == 1, "목록은 그대로다")
     }
 }
 
-/// 0…n-1 불변식과 기본 카테고리 삭제 금지를 흉내내는 메모리 저장소.
+/// 0…n-1 불변식과 마지막 하나 삭제 금지를 흉내내는 메모리 저장소.
 private actor FakeCategoryRepository: CategoryRepository {
     private var storage: [ExpenseCategory]
     private let failure: DomainError?
+    /// 카테고리별 지출 건수. 실제 저장소의 연쇄 삭제를 흉내내는 데 쓴다.
+    private var expenseCounts: [UUID: Int]
 
-    init(_ categories: [ExpenseCategory], failure: DomainError? = nil) {
+    init(
+        _ categories: [ExpenseCategory],
+        failure: DomainError? = nil,
+        expenseCounts: [UUID: Int] = [:]
+    ) {
         self.storage = Self.reindexed(categories)
         self.failure = failure
+        self.expenseCounts = expenseCounts
+    }
+
+    func expenseCount(using id: UUID) async throws -> Int {
+        expenseCounts[id] ?? 0
     }
 
     func categories() async throws -> [ExpenseCategory] { storage }
@@ -165,11 +247,10 @@ private actor FakeCategoryRepository: CategoryRepository {
         guard let index = storage.firstIndex(where: { $0.id == id }) else {
             throw DomainError.categoryNotFound(id)
         }
-        guard !storage[index].isBuiltIn else {
-            throw DomainError.builtInCategoryNotDeletable(id)
-        }
+        guard storage.count > 1 else { throw DomainError.lastCategoryNotDeletable }
         storage.remove(at: index)
         storage = Self.reindexed(storage)
+        expenseCounts[id] = nil
     }
 
     func reorder(_ orderedIDs: [UUID]) async throws {

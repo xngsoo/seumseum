@@ -42,11 +42,13 @@ struct CategoryEditorView: View {
         .background(AppColor.background)
         .safeAreaInset(edge: .bottom) { saveButton }
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .alert("저장하지 못했습니다", isPresented: $viewModel.isErrorPresented) {
-            Button("확인", role: .cancel) {}
-        } message: {
-            Text(viewModel.errorMessage ?? "")
-        }
+        .dimmedAlert(
+            isPresented: $viewModel.isErrorPresented,
+            title: "저장하지 못했습니다",
+            message: viewModel.errorMessage ?? "",
+            confirmTitle: "확인",
+            cancelTitle: nil
+        )
         .task {
             // 수정할 때는 이미 이름이 있으니 키보드를 띄우지 않는다. 새로 만들 때만 바로 입력받는다.
             guard !viewModel.isEditing else { return }
@@ -97,8 +99,9 @@ struct CategoryEditorView: View {
     private var colorSection: some View {
         LabeledSection("색상") {
             LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: AppSpacing.sm), count: 8),
-                spacing: AppSpacing.sm
+                // 12색이 6열 두 줄로 떨어진다.
+                columns: Array(repeating: GridItem(.flexible(), spacing: AppSpacing.md), count: 6),
+                spacing: AppSpacing.md
             ) {
                 ForEach(ColorToken.allCases, id: \.self) { token in
                     Button {

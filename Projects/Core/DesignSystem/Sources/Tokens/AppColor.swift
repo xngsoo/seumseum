@@ -12,13 +12,17 @@ public enum AppColor {
 
     public static func category(_ token: ColorToken) -> Color {
         switch token {
-        case .orange: DesignSystemAsset.categoryOrange.swiftUIColor
-        case .brown: DesignSystemAsset.categoryBrown.swiftUIColor
-        case .blue: DesignSystemAsset.categoryBlue.swiftUIColor
-        case .pink: DesignSystemAsset.categoryPink.swiftUIColor
-        case .green: DesignSystemAsset.categoryGreen.swiftUIColor
         case .red: DesignSystemAsset.categoryRed.swiftUIColor
+        case .orange: DesignSystemAsset.categoryOrange.swiftUIColor
+        case .yellow: DesignSystemAsset.categoryYellow.swiftUIColor
+        case .lime: DesignSystemAsset.categoryLime.swiftUIColor
+        case .green: DesignSystemAsset.categoryGreen.swiftUIColor
+        case .teal: DesignSystemAsset.categoryTeal.swiftUIColor
+        case .blue: DesignSystemAsset.categoryBlue.swiftUIColor
+        case .indigo: DesignSystemAsset.categoryIndigo.swiftUIColor
         case .purple: DesignSystemAsset.categoryPurple.swiftUIColor
+        case .pink: DesignSystemAsset.categoryPink.swiftUIColor
+        case .brown: DesignSystemAsset.categoryBrown.swiftUIColor
         case .gray: DesignSystemAsset.categoryGray.swiftUIColor
         }
     }

@@ -46,30 +46,21 @@ public struct SettingsView: View {
                 CategoryListView(categoryRepository: categoryRepository)
             }
             .task { await viewModel.load() }
-            .alert("통계 기준이 바뀝니다", isPresented: $viewModel.isNoticePresented) {
-                Button("확인", role: .cancel) {}
-            } message: {
-                Text("통계를 급여 주기 단위로 봅니다. 이미 기록한 지출은 그대로이고, 묶어 보는 기준만 달라집니다.")
-            }
-            .confirmationDialog(
-                "모든 지출 기록을 지울까요?",
-                isPresented: $viewModel.isResetConfirmPresented,
-                titleVisibility: .visible
+            // 딤드 알럿은 fullScreenCover 로 뜬다. 한 뷰에 여러 개 붙이면 하나만 동작하므로
+            // 세 안내를 하나로 모아 띄운다. 셋은 동시에 뜰 일이 없다.
+            .dimmedAlert(
+                isPresented: alertBinding,
+                title: activeAlert?.title ?? "",
+                message: activeAlert?.message ?? "",
+                confirmTitle: activeAlert?.confirmTitle ?? "확인",
+                isDestructive: activeAlert?.isDestructive ?? false,
+                cancelTitle: activeAlert?.cancelTitle
             ) {
-                Button("모두 삭제", role: .destructive) {
-                    Task {
-                        await viewModel.resetAllExpenses()
-                        navigation.dataDidChange()
-                    }
+                guard activeAlert == .resetConfirm else { return }
+                Task {
+                    await viewModel.resetAllExpenses()
+                    navigation.dataDidChange()
                 }
-                Button("취소", role: .cancel) {}
-            } message: {
-                Text("되돌릴 수 없습니다. 카테고리와 설정은 그대로 남습니다.")
-            }
-            .alert("삭제했습니다", isPresented: $viewModel.isResetDonePresented) {
-                Button("확인", role: .cancel) {}
-            } message: {
-                Text("지출 기록을 모두 지웠습니다.")
             }
         }
     }
@@ -160,6 +151,68 @@ public struct SettingsView: View {
         } footer: {
             Text("지출 기록을 모두 지웁니다. 카테고리와 설정은 남습니다.")
         }
+    }
+
+    // MARK: - 안내 창
+
+    private enum ActiveAlert {
+        case paydayNotice
+        case resetConfirm
+        case resetDone
+
+        var title: String {
+            switch self {
+            case .paydayNotice: "통계 기준이 바뀝니다"
+            case .resetConfirm: "모든 지출 기록을 지울까요?"
+            case .resetDone: "삭제했습니다"
+            }
+        }
+
+        var message: String {
+            switch self {
+            case .paydayNotice:
+                "통계를 급여 주기 단위로 봅니다.\n이미 기록한 지출은 그대로이고, 묶어 보는 기준만 달라집니다."
+            case .resetConfirm:
+                "되돌릴 수 없습니다.\n카테고리와 설정은 그대로 남습니다."
+            case .resetDone:
+                "지출 기록을 모두 지웠습니다."
+            }
+        }
+
+        var confirmTitle: String {
+            switch self {
+            case .paydayNotice, .resetDone: "확인"
+            case .resetConfirm: "모두 삭제"
+            }
+        }
+
+        var cancelTitle: String? {
+            switch self {
+            case .paydayNotice, .resetDone: nil
+            case .resetConfirm: "취소"
+            }
+        }
+
+        var isDestructive: Bool { self == .resetConfirm }
+    }
+
+    private var activeAlert: ActiveAlert? {
+        if viewModel.isNoticePresented { return .paydayNotice }
+        if viewModel.isResetConfirmPresented { return .resetConfirm }
+        if viewModel.isResetDonePresented { return .resetDone }
+        return nil
+    }
+
+    private var alertBinding: Binding<Bool> {
+        Binding(
+            get: { activeAlert != nil },
+            set: { isPresented in
+                guard !isPresented else { return }
+                viewModel.isNoticePresented = false
+                viewModel.isResetConfirmPresented = false
+                viewModel.isResetDonePresented = false
+            }
+        )
     }
 
     // MARK: - 바인딩

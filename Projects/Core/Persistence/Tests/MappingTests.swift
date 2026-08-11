@@ -87,11 +87,12 @@ struct MappingTests {
         #expect(fetched.first?.memo == "점심")
     }
 
-    @Test("기본 카테고리는 8개이고 모두 isBuiltIn")
+    @Test("기본 카테고리는 6개이고 모두 isBuiltIn")
     func builtInCategories() {
-        #expect(BuiltInCategories.all.count == 8)
+        #expect(BuiltInCategories.all.count == 6)
         let allBuiltIn = BuiltInCategories.all.allSatisfy { $0.isBuiltIn }
         #expect(allBuiltIn)
-        #expect(BuiltInCategories.all.map(\.sortOrder) == Array(0 ..< 8))
+        #expect(BuiltInCategories.all.map(\.sortOrder) == Array(0 ..< 6))
+        #expect(BuiltInCategories.all.count <= ExpenseCategory.maxCount)
     }
 }

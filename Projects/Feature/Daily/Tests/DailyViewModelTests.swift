@@ -35,6 +35,7 @@ final class StubCategoryRepository: CategoryRepository, @unchecked Sendable {
     func category(id: UUID) async throws -> ExpenseCategory? { categories.first { $0.id == id } }
     func insert(_ category: ExpenseCategory, at index: Int) async throws {}
     func update(_ category: ExpenseCategory) async throws {}
+    func expenseCount(using id: UUID) async throws -> Int { 0 }
     func delete(id: UUID) async throws {}
     func reorder(_ orderedIDs: [UUID]) async throws {}
 }

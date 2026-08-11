@@ -33,13 +33,36 @@ actor SwiftDataCategoryRepository: CategoryRepository {
         try save()
     }
 
+    func expenseCount(using id: UUID) throws -> Int {
+        do {
+            return try modelContext.fetchCount(
+                FetchDescriptor<ExpenseRecord>(predicate: #Predicate { $0.categoryID == id })
+            )
+        } catch {
+            throw DomainError.storageFailed(String(describing: error))
+        }
+    }
+
+    /// 기본 카테고리도 지울 수 있고, 그 카테고리를 쓰던 지출도 함께 지운다.
+    /// 다만 마지막 하나는 남긴다. 카테고리가 없으면 지출을 추가할 수 없기 때문이다.
+    /// 몇 건이 함께 지워지는지는 호출부가 `expenseCount(using:)` 로 먼저 알린다.
     func delete(id: UUID) throws {
         guard let record = try record(id: id) else { throw DomainError.categoryNotFound(id) }
-        guard !record.isBuiltIn else { throw DomainError.builtInCategoryNotDeletable(id) }
-        guard try !isInUse(id) else { throw DomainError.categoryInUse(id) }
+        guard try allRecords().count > 1 else { throw DomainError.lastCategoryNotDeletable }
 
+        let doomed = try expenseRecords(using: id)
+        let affectedDays = Set(doomed.map(\.day))
+        for expense in doomed {
+            modelContext.delete(expense)
+        }
         modelContext.delete(record)
         reindex(try allRecords().filter { $0.id != id })
+        try save()
+
+        // 지출이 빠진 날짜는 sortOrder 에 구멍이 생기므로 0…n-1 로 다시 매긴다.
+        for day in affectedDays {
+            reindexExpenses(try expenseRecords(on: day))
+        }
         try save()
     }
 
@@ -77,16 +100,30 @@ actor SwiftDataCategoryRepository: CategoryRepository {
         catch { throw DomainError.storageFailed(String(describing: error)) }
     }
 
-    private func isInUse(_ categoryID: UUID) throws -> Bool {
-        var descriptor = FetchDescriptor<ExpenseRecord>(
+    private func expenseRecords(using categoryID: UUID) throws -> [ExpenseRecord] {
+        let descriptor = FetchDescriptor<ExpenseRecord>(
             predicate: #Predicate { $0.categoryID == categoryID }
         )
-        descriptor.fetchLimit = 1
-        do { return try !modelContext.fetch(descriptor).isEmpty }
+        do { return try modelContext.fetch(descriptor) }
+        catch { throw DomainError.storageFailed(String(describing: error)) }
+    }
+
+    private func expenseRecords(on day: Date) throws -> [ExpenseRecord] {
+        let descriptor = FetchDescriptor<ExpenseRecord>(
+            predicate: #Predicate { $0.day == day },
+            sortBy: [SortDescriptor(\.sortOrder)]
+        )
+        do { return try modelContext.fetch(descriptor) }
         catch { throw DomainError.storageFailed(String(describing: error)) }
     }
 
     private func reindex(_ records: [CategoryRecord]) {
+        for (index, record) in records.enumerated() where record.sortOrder != index {
+            record.sortOrder = index
+        }
+    }
+
+    private func reindexExpenses(_ records: [ExpenseRecord]) {
         for (index, record) in records.enumerated() where record.sortOrder != index {
             record.sortOrder = index
         }

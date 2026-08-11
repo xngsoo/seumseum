@@ -18,14 +18,7 @@ struct CategoryRow: View {
             Text(category.name)
                 .font(AppFont.rowTitle)
                 .foregroundStyle(AppColor.textPrimary)
-            if category.isBuiltIn {
-                Text("기본")
-                    .font(AppFont.caption)
-                    .foregroundStyle(AppColor.textSecondary)
-                    .padding(.horizontal, AppSpacing.sm)
-                    .padding(.vertical, 2)
-                    .background(AppColor.background, in: Capsule())
-            }
+                .lineLimit(1)
             Spacer()
         }
         .contentShape(Rectangle())
@@ -35,7 +28,10 @@ struct CategoryRow: View {
 #Preview {
     CategoryRow(
         category: ExpenseCategory(
-            name: "식비", symbolName: "fork.knife", colorToken: .orange, isBuiltIn: true
+            name: "주거/생활", symbolName: "house.fill", colorToken: .green, isBuiltIn: true
         )
     )
+    .padding(.horizontal, AppSpacing.screenMargin)
+    .frame(height: 56)
+    .background(AppColor.surface)
 }

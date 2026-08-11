@@ -6,7 +6,14 @@ import Domain
 @Observable
 public final class CategoryListViewModel {
 
+    /// 지출이 딸린 카테고리를 지우려 할 때, 사용자에게 확인받는 동안 들고 있는 값.
+    public struct PendingDeletion: Equatable, Sendable {
+        public let category: ExpenseCategory
+        public let expenseCount: Int
+    }
+
     public private(set) var categories: [ExpenseCategory] = []
+    public private(set) var pendingDeletion: PendingDeletion?
     public private(set) var errorMessage: String?
     public var isErrorPresented = false
 
@@ -66,6 +73,52 @@ public final class CategoryListViewModel {
             categories = previous
             present(error)
         }
+    }
+
+    // MARK: - 삭제
+
+    /// 쓰고 있는 지출이 없으면 바로 지우고, 있으면 확인부터 받는다.
+    public func requestDelete(_ category: ExpenseCategory) async {
+        do {
+            let count = try await categoryRepository.expenseCount(using: category.id)
+            guard count > 0 else {
+                await delete(category)
+                return
+            }
+            pendingDeletion = PendingDeletion(category: category, expenseCount: count)
+        } catch {
+            present(error)
+        }
+    }
+
+    /// 확인 창의 대상을 꺼내면서 비운다.
+    /// 창이 닫히며 `cancelDeletion()` 이 뒤따라 불려도, 이미 꺼낸 값으로 삭제를 이어갈 수 있다.
+    public func takePendingDeletion() -> ExpenseCategory? {
+        defer { pendingDeletion = nil }
+        return pendingDeletion?.category
+    }
+
+    public func confirmDeletion() async {
+        guard let category = takePendingDeletion() else { return }
+        await delete(category)
+    }
+
+    public func cancelDeletion() {
+        pendingDeletion = nil
+    }
+
+    /// 확인 창에 쓸 문구. 함께 지워지는 지출 건수를 밝힌다.
+    public var deletionTitle: String {
+        guard let pending = pendingDeletion else { return "" }
+        return "‘\(pending.category.name)’을 삭제할까요?"
+    }
+
+    public var deletionMessage: String {
+        guard let pending = pendingDeletion else { return "" }
+        return """
+        이 카테고리로 기록한 지출 \(pending.expenseCount)건도 함께 지워집니다.
+        되돌릴 수 없습니다.
+        """
     }
 
     public func delete(_ category: ExpenseCategory) async {
