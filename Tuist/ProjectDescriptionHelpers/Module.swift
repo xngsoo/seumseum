@@ -129,6 +129,8 @@ public extension Project {
             sources: ["Sources/**"],
             resources: ["Resources/**"],
             dependencies: dependencies,
+            // 앱 아이콘은 Resources/Assets.xcassets 의 AppIcon 에서 가져온다
+            settings: .settings(base: ["ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon"]),
             launchArguments: [.launchArgument(name: "-seedSampleData", isEnabled: false)]
         )
         

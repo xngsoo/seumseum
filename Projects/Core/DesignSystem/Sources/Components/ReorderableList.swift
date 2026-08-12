@@ -2,33 +2,48 @@ import SwiftUI
 
 /// 롱프레스 드래그 재정렬과 스와이프 삭제를 직접 다루는 목록.
 ///
-/// `List` 를 쓰지 않는 이유는 재정렬 뒤 마지막 행 아래에 구분선이 되살아나고,
+/// `List` 를 쓰지 않는 이유는 재정렬 뒤 마지막 행 아래에 구분선을 되살리고,
 /// 행 구성을 다시 적용하는 시점을 우리가 잡을 수 없기 때문이다.
 /// 재정렬을 행 높이 단위로 계산하므로 모든 행의 높이는 `rowHeight` 로 같다.
 /// 호출부에서 `@ScaledMetric` 으로 넘기면 글자 크기 설정을 따라간다.
+///
+/// 손짓으로만 쓸 수 있는 재정렬·삭제는 VoiceOver 로 닿지 않으므로
+/// 행마다 "위로 이동 / 아래로 이동 / 삭제" 사용자화 동작을 함께 붙인다.
 public struct ReorderableList<Item: Identifiable, Row: View, Footer: View>: View {
 
-    private let items: [Item]
-    private let rowHeight: CGFloat
-    private let onSelect: (Item) -> Void
+    // 제스처는 ReorderableList+Gestures.swift 에 있다. 파일이 다르므로 상태는 private 이 아니다.
+
+    let items: [Item]
+    let rowHeight: CGFloat
+    let onSelect: (Item) -> Void
     /// nil 이면 스와이프 삭제를 붙이지 않는다.
-    private let onDelete: ((Item) -> Void)?
+    let onDelete: ((Item) -> Void)?
     /// 드래그하는 동안 화면 순서만 바꾼다.
-    private let onMove: (Int, Int) -> Void
+    let onMove: (Int, Int) -> Void
     /// 손을 뗄 때 한 번만 저장한다.
-    private let onMoveEnded: () -> Void
-    private let row: (Item) -> Row
-    private let footer: () -> Footer
+    let onMoveEnded: () -> Void
+    let row: (Item) -> Row
+    let footer: () -> Footer
 
-    @State private var draggingID: Item.ID?
+    @State var draggingID: Item.ID?
     /// 드래그를 시작한 자리. 목표 위치를 여기서부터 절대 계산한다.
-    @State private var dragStartIndex: Int?
-    @State private var dragTranslation: CGFloat = 0
-    @State private var swipedID: Item.ID?
-    @State private var swipeOffset: CGFloat = 0
-    @State private var swipeBase: CGFloat = 0
+    @State var dragStartIndex: Int?
+    @State var dragTranslation: CGFloat = 0
+    /// 자동 스크롤로 흘러간 거리. 손가락이 멈춰 있어도 이만큼 더 끈 것으로 친다.
+    @State var autoScrollShift: CGFloat = 0
+    @State var autoScrollDirection = 0
+    @State var autoScrollTask: Task<Void, Never>?
+    /// 자동 스크롤 박자. 값이 바뀔 때마다 뷰가 최신 목록으로 한 칸을 처리한다.
+    @State var autoScrollTick = 0
+    /// 손가락의 화면 세로 위치. 가장자리에 닿았는지 판단하는 데 쓴다.
+    @State var dragScreenY: CGFloat = 0
+    @State var swipedID: Item.ID?
+    @State var swipeOffset: CGFloat = 0
+    @State var swipeBase: CGFloat = 0
 
-    private let deleteWidth: CGFloat = 88
+    let deleteWidth: CGFloat = 88
+    /// 이 폭 안으로 들어오면 목록이 저절로 흐른다.
+    let edgeZone: CGFloat = 72
 
     public init(
         _ items: [Item],
@@ -51,23 +66,37 @@ public struct ReorderableList<Item: Identifiable, Row: View, Footer: View>: View
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    ForEach(items) { item in
-                        rowView(item)
+        GeometryReader { proxy in
+            ScrollViewReader { scroller in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        VStack(spacing: 0) {
+                            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                                rowView(item, at: index)
+                            }
+                        }
+                        // 드래그 중에는 애니메이션을 끈다. 자리 이동이 애니메이션되면
+                        // 들고 있는 행이 손가락보다 한 칸씩 뒤처진다.
+                        .animation(
+                            draggingID == nil ? .snappy(duration: 0.25) : nil,
+                            value: items.map(\.id)
+                        )
+
+                        footer()
                     }
                 }
-                // 드래그 중에는 애니메이션을 끈다. 자리 이동이 애니메이션되면
-                // 들고 있는 행이 손가락보다 한 칸씩 뒤처진다.
-                .animation(draggingID == nil ? .snappy(duration: 0.25) : nil, value: items.map(\.id))
-
-                footer()
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
+                .scrollDisabled(draggingID != nil)
+                .onChange(of: dragScreenY) { _, _ in
+                    updateAutoScroll(in: proxy.frame(in: .global))
+                }
+                // 박자마다 여기서 처리해야 `items` 가 최신이다. 반복 작업 안에서 하면 낡은 사본을 본다.
+                .onChange(of: autoScrollTick) { _, _ in
+                    autoScrollStep(scroller)
+                }
             }
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .scrollIndicators(.hidden)
-        .scrollDisabled(draggingID != nil)
         .sensoryFeedback(.selection, trigger: draggingID)
         .onChange(of: items.map(\.id)) { _, _ in
             if draggingID == nil { closeSwipe() }
@@ -76,7 +105,7 @@ public struct ReorderableList<Item: Identifiable, Row: View, Footer: View>: View
 
     // MARK: - 행
 
-    private func rowView(_ item: Item) -> some View {
+    private func rowView(_ item: Item, at index: Int) -> some View {
         let isDragging = item.id == draggingID
         let isSwiped = item.id == swipedID
 
@@ -84,7 +113,6 @@ public struct ReorderableList<Item: Identifiable, Row: View, Footer: View>: View
             if let onDelete {
                 deleteButton(item, onDelete: onDelete)
                     .opacity(isSwiped ? 1 : 0)
-                    .accessibilityHidden(!isSwiped)
             }
 
             row(item)
@@ -93,7 +121,7 @@ public struct ReorderableList<Item: Identifiable, Row: View, Footer: View>: View
                 .frame(height: rowHeight)
                 .background(AppColor.surface)
                 .overlay(alignment: .bottom) {
-                    if !isDragging, item.id != items.last?.id {
+                    if !isDragging, index < items.count - 1 {
                         Divider()
                             .overlay(AppColor.separator)
                             .padding(.leading, AppSpacing.screenMargin)
@@ -113,6 +141,20 @@ public struct ReorderableList<Item: Identifiable, Row: View, Footer: View>: View
         .simultaneousGesture(reorderGesture(item))
         .simultaneousGesture(swipeGesture(item))
         .transition(.opacity)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onSelect(item) }
+        .accessibilityActions {
+            if index > 0 {
+                Button("위로 이동") { moveByAccessibility(from: index, to: index - 1) }
+            }
+            if index < items.count - 1 {
+                Button("아래로 이동") { moveByAccessibility(from: index, to: index + 1) }
+            }
+            if let onDelete {
+                Button("삭제") { onDelete(item) }
+            }
+        }
     }
 
     private func deleteButton(_ item: Item, onDelete: @escaping (Item) -> Void) -> some View {
@@ -130,109 +172,10 @@ public struct ReorderableList<Item: Identifiable, Row: View, Footer: View>: View
                 .background(AppColor.category(.red))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("삭제")
+        // 스와이프로만 닿는 버튼이라 VoiceOver 에는 사용자화 동작으로 대신 노출한다.
+        .accessibilityHidden(true)
     }
 
-    // MARK: - 탭
-
-    private func tap(_ item: Item) {
-        if swipedID == nil {
-            onSelect(item)
-        } else {
-            closeSwipe()
-        }
-    }
-
-    // MARK: - 롱프레스 드래그 재정렬
-
-    /// 좌표계가 `.global` 인 것이 중요하다. 기본값인 `.local` 은 행 자신의 좌표계라서
-    /// 자리가 바뀌거나 `offset` 이 걸리면 손가락이 멈춰 있어도 `translation` 이 튄다.
-    /// 그 값으로 다시 목표 자리를 정하면 되먹임이 생겨 행이 두 자리를 오간다.
-    private func reorderGesture(_ item: Item) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.35)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .global))
-            .onChanged { value in
-                guard case let .second(_, drag) = value else { return }
-                if draggingID != item.id {
-                    closeSwipe()
-                    draggingID = item.id
-                    dragStartIndex = items.firstIndex { $0.id == item.id }
-                    dragTranslation = 0
-                }
-                guard let drag else { return }
-                dragTranslation = drag.translation.height
-                reorderIfNeeded(item)
-            }
-            .onEnded { _ in endReorder() }
-    }
-
-    /// 목표 자리는 항상 "시작 자리 + 총 이동량 ÷ 행 높이" 로 구한다.
-    /// 한 칸 옮길 때마다 이동량을 깎는 방식은 다음 이벤트가 원래 이동량으로 덮어써서
-    /// 같은 손짓에 여러 칸이 계속 밀린다.
-    private func reorderIfNeeded(_ item: Item) {
-        guard let start = dragStartIndex,
-              let current = items.firstIndex(where: { $0.id == item.id }) else { return }
-
-        let shift = Int((dragTranslation / rowHeight).rounded())
-        let target = min(max(start + shift, 0), items.count - 1)
-        guard target != current else { return }
-
-        onMove(current, target)
-    }
-
-    /// 들고 있는 행은 이미 옮겨간 칸수만큼 빼야 손가락 아래에 그대로 붙어 있는다.
-    private func dragOffset(of item: Item) -> CGFloat {
-        guard item.id == draggingID,
-              let start = dragStartIndex,
-              let current = items.firstIndex(where: { $0.id == item.id }) else { return 0 }
-        return dragTranslation - CGFloat(current - start) * rowHeight
-    }
-
-    private func endReorder() {
-        guard draggingID != nil else { return }
-        withAnimation(.snappy(duration: 0.2)) {
-            draggingID = nil
-            dragStartIndex = nil
-            dragTranslation = 0
-        }
-        onMoveEnded()
-    }
-
-    // MARK: - 스와이프 삭제
-
-    /// 스와이프도 같은 이유로 `.global` 이다. 행이 왼쪽으로 밀린 만큼 로컬 좌표가 따라 움직여서
-    /// 기본 좌표계로는 이동량이 깎인다.
-    private func swipeGesture(_ item: Item) -> some Gesture {
-        DragGesture(minimumDistance: 12, coordinateSpace: .global)
-            .onChanged { value in
-                guard onDelete != nil, draggingID == nil else { return }
-                // 세로로 끄는 손짓은 스크롤에 넘긴다.
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                if swipedID != item.id {
-                    swipedID = item.id
-                    swipeBase = 0
-                }
-                swipeOffset = min(max(swipeBase + value.translation.width, -deleteWidth * 1.2), 0)
-            }
-            .onEnded { _ in
-                guard swipedID == item.id else { return }
-                let opens = swipeOffset < -deleteWidth / 2
-                swipeBase = opens ? -deleteWidth : 0
-                withAnimation(.snappy(duration: 0.2)) {
-                    swipeOffset = swipeBase
-                    if !opens { swipedID = nil }
-                }
-            }
-    }
-
-    private func closeSwipe() {
-        guard swipedID != nil else { return }
-        swipeBase = 0
-        withAnimation(.snappy(duration: 0.2)) {
-            swipeOffset = 0
-            swipedID = nil
-        }
-    }
 }
 
 public extension ReorderableList where Footer == EmptyView {
@@ -265,7 +208,7 @@ public extension ReorderableList where Footer == EmptyView {
     }
 
     struct Preview: View {
-        @State private var items = [Sample(name: "식비"), Sample(name: "카페"), Sample(name: "교통")]
+        @State var items = (1 ... 20).map { Sample(name: "항목 \($0)") }
         @ScaledMetric(relativeTo: .body) private var rowHeight: CGFloat = 56
 
         var body: some View {
@@ -277,12 +220,14 @@ public extension ReorderableList where Footer == EmptyView {
                 onMove: { source, destination in
                     items.insert(items.remove(at: source), at: destination)
                 },
-                onMoveEnded: {}
-            ) { item in
-                Text(item.name)
-                    .font(AppFont.rowTitle)
-                    .foregroundStyle(AppColor.textPrimary)
-            }
+                onMoveEnded: {},
+                row: { item in
+                    Text(item.name)
+                        .font(AppFont.rowTitle)
+                        .foregroundStyle(AppColor.textPrimary)
+                },
+                footer: { EmptyView() }
+            )
             .background(AppColor.background)
         }
     }

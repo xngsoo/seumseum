@@ -19,6 +19,7 @@ struct CategoryRow: View {
                 .font(AppFont.rowTitle)
                 .foregroundStyle(AppColor.textPrimary)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Spacer()
         }
         .contentShape(Rectangle())

@@ -6,8 +6,14 @@ import Shared
 public struct DailyView: View {
     @Environment(AppNavigation.self) private var navigation
     @State private var viewModel: DailyViewModel
+    @Environment(\.dynamicTypeSize) private var typeSize
     /// 아이콘 36 + 위아래 여백. 글자 크기 설정을 따라간다.
     @ScaledMetric(relativeTo: .body) private var rowHeight: CGFloat = 68
+
+    /// 접근성 글자 크기에서는 내용이 두 줄까지 늘어나므로 행도 그만큼 키운다.
+    private var listRowHeight: CGFloat {
+        typeSize.isAccessibilitySize ? rowHeight * 1.4 : rowHeight
+    }
 
     public init(
         expenseRepository: any ExpenseRepository,
@@ -23,7 +29,7 @@ public struct DailyView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            DailyHeader( 
+            DailyHeader(
                 day: navigation.selectedDate,
                 total: viewModel.total,
                 onPrevious: { step(-1) },
@@ -47,7 +53,7 @@ public struct DailyView: View {
         } else {
             ReorderableList(
                 viewModel.expenses,
-                rowHeight: rowHeight,
+                rowHeight: listRowHeight,
                 onSelect: { navigation.presentEditor(for: $0) },
                 onDelete: { expense in
                     Task {
@@ -60,10 +66,11 @@ public struct DailyView: View {
                 },
                 onMoveEnded: {
                     Task { await viewModel.commitReorder() }
+                },
+                row: { expense in
+                    ExpenseRow(expense: expense, category: viewModel.category(for: expense))
                 }
-            ) { expense in
-                ExpenseRow(expense: expense, category: viewModel.category(for: expense))
-            }
+            )
         }
     }
 
@@ -82,7 +89,7 @@ public struct DailyView: View {
     private func step(_ days: Int) {
         navigation.selectedDate = CalendarDay.adding(days: days, to: navigation.selectedDate)
     }
-    
+
     private struct LoadKey: Hashable {
         let day: Date
         let version: Int
