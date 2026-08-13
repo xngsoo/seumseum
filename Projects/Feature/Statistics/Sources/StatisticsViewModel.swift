@@ -11,6 +11,20 @@ public final class StatisticsViewModel {
     public private(set) var isLoading = false
     public private(set) var errorMessage: String?
 
+    /// 무엇을 기준으로 끊은 주기인지. 화면 제목 아래에 작게 붙는다.
+    /// 통계만 급여 주기를 쓰므로, 여기 적어 두지 않으면 왜 1일부터가 아닌지 알 수 없다.
+    public var basisText: String {
+        switch setting {
+        case .calendarMonth:
+            "달력 기준 · 1일~말일"
+        case let .payday(day, _):
+            switch day {
+            case let .day(value): "급여 주기 · 매월 \(value)일"
+            case .lastDay: "급여 주기 · 매월 말일"
+            }
+        }
+    }
+
     /// 현재 보고 있는 주기 안의 아무 날짜. 주기 이동의 기준점이다.
     private var anchor: Date
     private var setting: PayPeriodSetting = .calendarMonth

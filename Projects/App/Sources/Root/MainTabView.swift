@@ -46,8 +46,8 @@ struct MainTabView: View {
     /// 스스로 탭바 자리를 비워 두는 탭. 나머지는 아직 옛 레이아웃이다.
     private var movedToFloatingTabBar: Bool {
         switch navigation.selectedTab {
-        case .daily, .monthly: true
-        case .statistics, .settings: false
+        case .daily, .monthly, .statistics: true
+        case .settings: false
         }
     }
 

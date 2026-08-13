@@ -5,24 +5,13 @@ struct DailyEmptyView: View {
     let onAdd: () -> Void
 
     var body: some View {
-        VStack(spacing: AppSpacing.md) {
-            Circle()
-                .strokeBorder(
-                    AppColor.dashedStroke,
-                    style: StrokeStyle(lineWidth: 1, dash: [3, 3])
-                )
-                .frame(width: 44, height: 44)
+        VStack(alignment: .center, spacing: AppSpacing.md) {
             Text("기록이 없는 날입니다")
                 .font(AppFont.rowDetail)
                 .foregroundStyle(AppColor.textFaint)
-            Button(action: onAdd) {
-                Label("지출 추가", systemImage: "plus")
-                    .font(AppFont.rowCaption)
-                    .foregroundStyle(AppColor.accentInk)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, AppSpacing.xs)
-            }
-            .buttonStyle(.plain)
+            Text("아래 추가버튼으로 지출을 추가해보세요")
+                .font(AppFont.rowCaption)
+                .foregroundStyle(AppColor.textDim)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 76)

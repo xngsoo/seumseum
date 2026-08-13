@@ -30,6 +30,10 @@ public enum AppFont {
     public static let sectionTitle = scaled(22, weight: .semibold, relativeTo: .title3)
     /// 좌우 화살표 사이에 놓이는 제목. 달 이름처럼 값이 길어지는 자리에 쓴다.
     public static let navTitle = scaled(19, weight: .semibold, relativeTo: .title3)
+    /// 기간 제목. 아래에 기준 설명이 한 줄 더 붙으므로 `navTitle` 보다 작다.
+    public static let periodTitle = scaled(16, weight: .semibold, relativeTo: .body, digitsAligned: true)
+    /// 카드 안의 값. 라벨 아래 한 줄로 놓인다.
+    public static let tileValue = scaled(17, weight: .semibold, relativeTo: .body, digitsAligned: true)
     /// 모달 제목.
     public static let sheetTitle = scaled(15, weight: .semibold, relativeTo: .body)
 
