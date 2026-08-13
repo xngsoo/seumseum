@@ -48,8 +48,13 @@ public final class ExpenseEditorViewModel {
     }
 
     public var isEditing: Bool {
-        if case .edit = route { return true }
-        return false
+        editingExpense != nil
+    }
+
+    /// 수정 중인 원본. 추가 화면이면 nil 이다.
+    public var editingExpense: Expense? {
+        if case let .edit(expense) = route { return expense }
+        return nil
     }
 
     public var title: String { isEditing ? "지출 수정" : "지출 추가" }
@@ -176,6 +181,21 @@ public final class ExpenseEditorViewModel {
         } catch {
             errorMessage = error.localizedDescription
             return false
+        }
+    }
+
+    /// 지운 자리를 돌려준다. 실패하면 nil.
+    /// 곧바로 지우고 목록 화면이 취소 스낵바를 띄운다. soft delete 는 하지 않는다.
+    public func delete() async -> Int? {
+        guard let editingExpense, !isSaving else { return nil }
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            return try await expenseRepository.delete(id: editingExpense.id)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
         }
     }
 

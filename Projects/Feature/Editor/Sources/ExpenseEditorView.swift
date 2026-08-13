@@ -9,15 +9,18 @@ public struct ExpenseEditorView: View {
     @State private var viewModel: ExpenseEditorViewModel
 
     private let onSaved: () -> Void
+    private let onDeleted: (Expense, Int) -> Void
 
     public init(
         route: EditorRoute,
         expenseRepository: any ExpenseRepository,
         categoryRepository: any CategoryRepository,
         settingsRepository: any SettingsRepository,
-        onSaved: @escaping () -> Void
+        onSaved: @escaping () -> Void,
+        onDeleted: @escaping (Expense, Int) -> Void
     ) {
         self.onSaved = onSaved
+        self.onDeleted = onDeleted
         _viewModel = State(
             initialValue: ExpenseEditorViewModel(
                 route: route,
@@ -40,6 +43,7 @@ public struct ExpenseEditorView: View {
                     categorySection
                     splitSection
                     detailCard
+                    deleteButton
                 }
                 .padding(.horizontal, AppSpacing.screenMargin)
                 .padding(.vertical, AppSpacing.lg)
@@ -164,6 +168,26 @@ public struct ExpenseEditorView: View {
         .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
     }
 
+    // MARK: - 삭제
+
+    /// 목록에서 스와이프로 지우던 자리를 대신한다.
+    /// 확인 없이 곧바로 지우고, 목록 화면이 취소 스낵바를 띄운다.
+    @ViewBuilder
+    private var deleteButton: some View {
+        if viewModel.isEditing {
+            Button(action: delete) {
+                Text("삭제")
+                    .font(AppFont.rowTitle)
+                    .foregroundStyle(AppColor.category(.red))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, AppSpacing.md)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isSaving)
+        }
+    }
+
     // MARK: - 하단
 
     /// 메모를 입력할 때는 시스템 키보드가 키패드를 가린다.
@@ -202,6 +226,16 @@ public struct ExpenseEditorView: View {
         Task {
             if await viewModel.save() {
                 onSaved()
+                dismiss()
+            }
+        }
+    }
+
+    private func delete() {
+        guard let expense = viewModel.editingExpense else { return }
+        Task {
+            if let index = await viewModel.delete() {
+                onDeleted(expense, index)
                 dismiss()
             }
         }

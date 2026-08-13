@@ -84,7 +84,35 @@ public extension CalendarDay {
     static func headerText(_ day: Date) -> String {
         return headerFormatter.string(from: day)
     }
-    
+
+    /// 날짜만. `8월 13일`
+    static func dayText(_ day: Date) -> String {
+        return dayFormatter.string(from: day)
+    }
+
+    /// 요일만. `목요일`
+    static func weekdayText(_ day: Date) -> String {
+        return weekdayFormatter.string(from: day)
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.locale = locale
+        formatter.dateFormat = "M월 d일"
+        return formatter
+    }()
+
+    private static let weekdayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.timeZone = calendar.timeZone
+        formatter.locale = locale
+        formatter.dateFormat = "EEEE"
+        return formatter
+    }()
+
     private static let headerFormatter : DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = calendar

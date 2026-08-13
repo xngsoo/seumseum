@@ -2,27 +2,35 @@ import SwiftUI
 import DesignSystem
 
 struct DailyEmptyView: View {
-    let onPrevious: () -> Void
-    let onNext: () -> Void
+    let onAdd: () -> Void
 
     var body: some View {
-        VStack(spacing: AppSpacing.sm) {
-            Image(systemName: "tray")
-                .font(.system(size: 40))
-                .foregroundStyle(AppColor.separator)
-            Text("이 날은 기록이 없어요")
-                .font(AppFont.rowTitle)
-                .foregroundStyle(AppColor.textPrimary)
-            Text("아래 + 버튼으로 지출을 추가해 보세요")
-                .font(AppFont.caption)
-                .foregroundStyle(AppColor.textSecondary)
+        VStack(spacing: AppSpacing.md) {
+            Circle()
+                .strokeBorder(
+                    AppColor.dashedStroke,
+                    style: StrokeStyle(lineWidth: 1, dash: [3, 3])
+                )
+                .frame(width: 44, height: 44)
+            Text("기록이 없는 날입니다")
+                .font(AppFont.rowDetail)
+                .foregroundStyle(AppColor.textFaint)
+            Button(action: onAdd) {
+                Label("지출 추가", systemImage: "plus")
+                    .font(AppFont.rowCaption)
+                    .foregroundStyle(AppColor.accentInk)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, AppSpacing.xs)
+            }
+            .buttonStyle(.plain)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .contentShape(Rectangle())
-        .gesture(DaySwipeGesture(onPrevious: onPrevious, onNext: onNext).gesture)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 76)
     }
 }
 
 #Preview {
-    DailyEmptyView(onPrevious: {}, onNext: {})
+    DailyEmptyView(onAdd: {})
+        .frame(maxHeight: .infinity)
+        .background(AppColor.background)
 }
