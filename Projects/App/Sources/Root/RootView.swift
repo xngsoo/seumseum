@@ -12,11 +12,16 @@ struct RootView: View {
 
     @State private var phase: Phase = .loading
     @State private var navigation = AppNavigation()
+    @State private var appearance = AppearanceStore()
 
     var body: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(AppColor.background)
+            // 색 토큰은 정적으로 읽혀서, 테마가 바뀌면 화면을 통째로 다시 그려야 한다.
+            .id(appearance.theme)
+            // 끄면 시스템 설정과 무관하게 언제나 밝은 화면이다.
+            .preferredColorScheme(appearance.isDarkMode ? .dark : .light)
     }
 
     @ViewBuilder
@@ -28,6 +33,7 @@ struct RootView: View {
         case let .ready(stack):
             MainTabView(stack: stack)
                 .environment(navigation)
+                .environment(appearance)
         case let .failed(message):
             BootstrapFailureView(message: message) {
                 phase = .loading
@@ -41,6 +47,10 @@ struct RootView: View {
             #if DEBUG
             try await SampleData.seedIfRequested(into: stack)
             #endif
+            // 첫 화면을 그리기 전에 색을 맞춰 둔다. 뒤늦게 바꾸면 한 번 번쩍인다.
+            if let settings = try? await stack.settings.settings() {
+                appearance.apply(theme: settings.theme, isDarkMode: settings.isDarkMode)
+            }
             phase = .ready(stack)
         } catch {
             phase = .failed(error.localizedDescription)

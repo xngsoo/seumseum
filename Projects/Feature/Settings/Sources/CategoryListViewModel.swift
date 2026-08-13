@@ -32,6 +32,32 @@ public final class CategoryListViewModel {
         "\(ExpenseCategory.maxCount)개 중 \(categories.count)개 사용"
     }
 
+    /// 화면 위쪽에 짧게 적는 자리 안내. `8 / 12`
+    public var countText: String {
+        "\(categories.count) / \(ExpenseCategory.maxCount)"
+    }
+
+    public func canMoveUp(_ category: ExpenseCategory) -> Bool {
+        index(of: category).map { $0 > 0 } ?? false
+    }
+
+    public func canMoveDown(_ category: ExpenseCategory) -> Bool {
+        index(of: category).map { $0 < categories.count - 1 } ?? false
+    }
+
+    /// 한 칸 위나 아래로 옮기고 곧바로 저장한다.
+    public func move(_ category: ExpenseCategory, by offset: Int) async {
+        guard let source = index(of: category) else { return }
+        let destination = source + offset
+        guard categories.indices.contains(destination) else { return }
+        moveLocally(from: source, to: destination)
+        await commitReorder()
+    }
+
+    private func index(of category: ExpenseCategory) -> Int? {
+        categories.firstIndex { $0.id == category.id }
+    }
+
     public func load() async {
         do {
             categories = try await categoryRepository.categories()

@@ -2,32 +2,40 @@ import SwiftUI
 import UIKit
 import Shared
 
-/// 색 토큰. 실제 값은 에셋 카탈로그가 라이트/다크 한 쌍으로 들고 있다.
+/// 색 토큰.
 ///
-/// 팔레트는 OKLCH 한 축에서 파생한다. 중립색은 액센트와 같은 색상각(85°)에
-/// 아주 낮은 채도를 얹어 화면 전체가 한 덩어리로 보이게 했다.
+/// 테마를 따라 달라지는 색은 `ThemePalette` 가 색상각 하나에서 계산한다.
+/// 중립색까지 액센트와 같은 각도에 아주 낮은 채도를 얹어 화면이 한 덩어리로 보인다.
+/// 카테고리·증감·선처럼 테마와 무관한 색은 에셋 카탈로그가 라이트/다크 한 쌍으로 들고 있다.
+@MainActor
 public enum AppColor {
+
+    /// 지금 쓰는 색 기조. 바꾸면 그 뒤로 읽는 색이 모두 달라진다.
+    /// 이미 그려진 화면까지 따라오게 하려면 `AppearanceStore` 로 바꿔야 한다.
+    public static var theme: AppTheme = .default
+
+    private static var palette: ThemePalette { ThemePalette(theme: theme) }
 
     // MARK: - 바탕과 표면
 
-    public static let background = DesignSystemAsset.background.swiftUIColor
-    public static let surface = DesignSystemAsset.surface.swiftUIColor
+    public static var background: Color { palette.background }
+    public static var surface: Color { palette.surface }
     /// 바탕에서 한 단계 떠 있는 면. 다이얼로그처럼 표면 위에 겹치는 것에 쓴다.
-    public static let surfaceRaised = DesignSystemAsset.surfaceRaised.swiftUIColor
+    public static var surfaceRaised: Color { palette.surfaceRaised }
     /// 바탕보다 한 단계 가라앉은 면. 키패드 트레이처럼 눌러 담는 곳에 쓴다.
-    public static let surfaceSunken = DesignSystemAsset.surfaceSunken.swiftUIColor
+    public static var surfaceSunken: Color { palette.surfaceSunken }
 
     // MARK: - 글자
 
-    public static let textPrimary = DesignSystemAsset.textPrimary.swiftUIColor
+    public static var textPrimary: Color { palette.textPrimary }
     /// 본문 다음가는 강조. 통계 범례처럼 제목은 아니지만 읽혀야 하는 곳.
-    public static let textStrong = DesignSystemAsset.textStrong.swiftUIColor
-    public static let textSecondary = DesignSystemAsset.textSecondary.swiftUIColor
-    public static let textMuted = DesignSystemAsset.textMuted.swiftUIColor
+    public static var textStrong: Color { palette.textStrong }
+    public static var textSecondary: Color { palette.textSecondary }
+    public static var textMuted: Color { palette.textMuted }
     /// 섹션 머리글, 단위, 캡션.
-    public static let textFaint = DesignSystemAsset.textFaint.swiftUIColor
+    public static var textFaint: Color { palette.textFaint }
     /// 비활성 상태. 눌러도 반응하지 않는다는 뜻으로만 쓴다.
-    public static let textDim = DesignSystemAsset.textDim.swiftUIColor
+    public static var textDim: Color { palette.textDim }
 
     // MARK: - 선과 상태
 
@@ -42,15 +50,24 @@ public enum AppColor {
 
     // MARK: - 액센트
 
-    public static let accent = DesignSystemAsset.accent.swiftUIColor
+    public static var accent: Color { palette.accent }
     /// 눌린 상태의 액센트.
-    public static let accentDeep = DesignSystemAsset.accentDeep.swiftUIColor
+    public static var accentDeep: Color { palette.accentDeep }
     /// 바탕 위 글자로 쓰는 액센트. 대비를 위해 액센트보다 어둡다.
-    public static let accentInk = DesignSystemAsset.accentInk.swiftUIColor
+    public static var accentInk: Color { palette.accentInk }
     /// 선택 상태의 옅은 배경.
-    public static let accentSoft = DesignSystemAsset.accentSoft.swiftUIColor
+    public static var accentSoft: Color { palette.accentSoft }
     /// 어두운 스낵바 위에서 쓰는 액센트.
-    public static let accentUndo = DesignSystemAsset.accentUndo.swiftUIColor
+    public static var accentUndo: Color { palette.accentUndo }
+
+    /// 테마 고르는 칸에 보여 주는 색. 지금 쓰는 테마와 무관하게 그 테마의 액센트다.
+    public static func accent(of theme: AppTheme) -> Color {
+        ThemePalette(theme: theme).accent
+    }
+
+    public static func accentSoft(of theme: AppTheme) -> Color {
+        ThemePalette(theme: theme).accentSoft
+    }
 
     // MARK: - 증감
 
@@ -60,8 +77,8 @@ public enum AppColor {
 
     // MARK: - 스낵바
 
-    public static let snackbarSurface = DesignSystemAsset.snackbarSurface.swiftUIColor
-    public static let snackbarLabel = DesignSystemAsset.snackbarLabel.swiftUIColor
+    public static var snackbarSurface: Color { palette.snackbarSurface }
+    public static var snackbarLabel: Color { palette.snackbarLabel }
 
     // MARK: - 카테고리
 
@@ -92,7 +109,7 @@ public enum AppColor {
 
     // MARK: - UIKit 짝
 
-    public static var uiTextPrimary: UIColor { DesignSystemAsset.textPrimary.color }
+    public static var uiTextPrimary: UIColor { UIColor(palette.textPrimary) }
 }
 
 public extension View {

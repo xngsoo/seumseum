@@ -7,8 +7,6 @@ struct CategoryListView: View {
     @Environment(AppNavigation.self) private var navigation
     @State private var viewModel: CategoryListViewModel
     @State private var editorMode: CategoryEditorViewModel.Mode?
-    /// 아이콘 32 + 위아래 여백. 글자 크기 설정을 따라간다.
-    @ScaledMetric(relativeTo: .body) private var rowHeight: CGFloat = 56
 
     private let categoryRepository: any CategoryRepository
 
@@ -21,34 +19,8 @@ struct CategoryListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScreenHeader("카테고리 관리", style: .subScreen, leading: .back { dismiss() }) {
-                addButton
-            }
-            Divider().overlay(AppColor.separator)
-
-            ReorderableList(
-                viewModel.categories,
-                rowHeight: rowHeight,
-                onSelect: { editorMode = .edit($0) },
-                onDelete: { category in
-                    Task { await viewModel.requestDelete(category) }
-                },
-                onMove: { source, destination in
-                    viewModel.moveLocally(from: source, to: destination)
-                },
-                onMoveEnded: {
-                    Task { await viewModel.commitReorder() }
-                }
-            ) { category in
-                CategoryRow(category: category)
-            } footer: {
-                Text("\(viewModel.capacityText) · 길게 눌러 순서를 바꿉니다")
-                    .font(AppFont.caption)
-                    .foregroundStyle(AppColor.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, AppSpacing.screenMargin)
-                    .padding(.vertical, AppSpacing.md)
-            }
+            ScreenHeader("카테고리 관리", style: .subScreen, leading: .back("설정", { dismiss() }))
+            list
         }
         .background(AppColor.background)
         .toolbar(.hidden, for: .navigationBar)
@@ -77,6 +49,69 @@ struct CategoryListView: View {
             )
         }
         .task { await viewModel.load() }
+    }
+
+    // MARK: - 목록
+
+    private var list: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                capacityBar
+                rows
+                Text("카테고리는 최대 \(ExpenseCategory.maxCount)개까지 둘 수 있습니다. 추가 화면에 4열 × 3줄로 모두 보이게 하기 위해서입니다.")
+                    .font(AppFont.caption)
+                    .lineSpacing(3)
+                    .foregroundStyle(AppColor.textFaint)
+                    .padding(.horizontal, AppSpacing.screenMargin)
+                    .padding(.top, 10)
+            }
+            .padding(.top, AppSpacing.lg)
+            .padding(.bottom, AppSpacing.xl * 2)
+        }
+        .scrollIndicators(.hidden)
+    }
+
+    private var capacityBar: some View {
+        HStack {
+            Text(viewModel.countText)
+                .font(AppFont.caption)
+                .tracking(0.6)
+                .foregroundStyle(AppColor.textFaint)
+            Spacer(minLength: AppSpacing.sm)
+            addButton
+        }
+        .padding(.horizontal, AppSpacing.screenMargin)
+        .padding(.bottom, AppSpacing.md)
+    }
+
+    private var rows: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(viewModel.categories.enumerated()), id: \.element.id) { index, category in
+                CategoryRow(
+                    category: category,
+                    canMoveUp: viewModel.canMoveUp(category),
+                    canMoveDown: viewModel.canMoveDown(category),
+                    onEdit: { editorMode = .edit(category) },
+                    onMoveUp: { Task { await viewModel.move(category, by: -1) } },
+                    onMoveDown: { Task { await viewModel.move(category, by: 1) } },
+                    onDelete: { Task { await viewModel.requestDelete(category) } }
+                )
+                if index < viewModel.categories.count - 1 {
+                    Rectangle()
+                        .fill(AppColor.separatorFaint)
+                        .frame(height: 1)
+                }
+            }
+        }
+        .background(AppColor.surface)
+        .overlay(alignment: .top) { hairline }
+        .overlay(alignment: .bottom) { hairline }
+    }
+
+    private var hairline: some View {
+        Rectangle()
+            .fill(AppColor.separator)
+            .frame(height: 1)
     }
 
     // MARK: - 안내 창
@@ -123,10 +158,10 @@ struct CategoryListView: View {
         Button {
             editorMode = .create(nextIndex: viewModel.categories.count)
         } label: {
-            Image(systemName: "plus")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(viewModel.canAdd ? AppColor.accent : AppColor.separator)
-                .frame(width: 32, height: 32)
+            Label("추가", systemImage: "plus")
+                .font(AppFont.rowCaption)
+                .foregroundStyle(viewModel.canAdd ? AppColor.accentInk : AppColor.textDim)
+                .padding(.vertical, AppSpacing.xs)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

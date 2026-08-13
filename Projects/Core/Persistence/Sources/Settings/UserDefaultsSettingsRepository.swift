@@ -1,5 +1,6 @@
 import Foundation
 import Domain
+import Shared
 
 /// 설정은 양이 적고 관계가 없어 SwiftData 대신 UserDefaults 에 둔다.
 /// 열거형을 통째로 인코딩하지 않고 원시 값으로 나눠 저장해, 케이스가 늘어도 마이그레이션이 쉽다.
@@ -15,6 +16,8 @@ public final class UserDefaultsSettingsRepository: SettingsRepository, @unchecke
         static let splitUnitAmount = "settings.split.unitAmount"
         static let splitCategoryID = "settings.split.categoryID"
         static let splitUnitLabel = "settings.split.unitLabel"
+        static let theme = "settings.appearance.theme"
+        static let darkMode = "settings.appearance.darkMode"
     }
 
     /// 저장 포맷에서 말일을 나타내는 값
@@ -30,9 +33,12 @@ public final class UserDefaultsSettingsRepository: SettingsRepository, @unchecke
         // 급여일 on/off 와 무관하게 저장·복원해야 껐다 켜도 안내가 다시 뜨지 않는다.
         let noticeSeen = defaults.bool(forKey: Key.paydayNoticeSeen)
         let split = storedSplitItem()
+        let theme = AppTheme(rawValue: defaults.string(forKey: Key.theme) ?? "") ?? .default
+        let isDarkMode = defaults.bool(forKey: Key.darkMode)
         guard defaults.bool(forKey: Key.paydayEnabled) else {
             return AppSettings(
-                payPeriod: .calendarMonth, hasSeenPaydayNotice: noticeSeen, splitItem: split
+                payPeriod: .calendarMonth, hasSeenPaydayNotice: noticeSeen, splitItem: split,
+                theme: theme, isDarkMode: isDarkMode
             )
         }
         // 0 은 말일을 뜻한다. 실제 일자는 1…31 이라 겹치지 않는다.
@@ -44,7 +50,9 @@ public final class UserDefaultsSettingsRepository: SettingsRepository, @unchecke
         return AppSettings(
             payPeriod: .payday(day: day, adjustment: adjustment),
             hasSeenPaydayNotice: noticeSeen,
-            splitItem: split
+            splitItem: split,
+            theme: theme,
+            isDarkMode: isDarkMode
         )
     }
 
@@ -67,6 +75,8 @@ public final class UserDefaultsSettingsRepository: SettingsRepository, @unchecke
 
     public func update(_ settings: AppSettings) async throws {
         defaults.set(settings.hasSeenPaydayNotice, forKey: Key.paydayNoticeSeen)
+        defaults.set(settings.theme.rawValue, forKey: Key.theme)
+        defaults.set(settings.isDarkMode, forKey: Key.darkMode)
         if let split = settings.splitItem {
             defaults.set(true, forKey: Key.splitEnabled)
             defaults.set(split.name, forKey: Key.splitName)

@@ -48,6 +48,10 @@ public final class AppNavigation {
     public var selectedDate: Date
     public var editorRoute: EditorRoute?
 
+    /// 탭 위에 밀고 들어온 화면이 덮여 있는지. 덮여 있는 동안에는 탭바를 감춘다.
+    /// 서브 화면은 그 화면 안에서 뒤로 나가야 하므로, 탭바가 남아 있으면 길이 둘이 된다.
+    public var isSubScreenPresented = false
+
     /// 수정 화면에서 지운 기록. 모달이 닫힌 뒤 목록 화면이 취소 스낵바를 띄운다.
     /// 삭제는 모달에서 하고 되돌리기는 목록에서 받으므로 이 통로를 거친다.
     public private(set) var lastDeleted: DeletedExpense?

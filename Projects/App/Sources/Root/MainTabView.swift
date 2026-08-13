@@ -21,12 +21,18 @@ struct MainTabView: View {
             // 탭바 뒤로 지나가는 글자를 가리는 일은 화면마다 알아서 한다.
             screen
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // 아직 새 레이아웃으로 옮기지 않은 탭은 탭바 높이만큼 아래를 비워 둔다.
-                .padding(.bottom, movedToFloatingTabBar ? 0 : AppSpacing.tabBarHeight)
 
-            AppTabBar(selection: $navigation.selectedTab) {
-                navigation.presentCreateEditor()
+            if !navigation.isSubScreenPresented {
+                AppTabBar(selection: $navigation.selectedTab) {
+                    navigation.presentCreateEditor()
+                }
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+        }
+        .animation(.snappy(duration: 0.25), value: navigation.isSubScreenPresented)
+        // 탭이 바뀌면 서브 화면도 함께 사라진다. 탭바가 감춰진 채로 남지 않게 한다.
+        .onChange(of: navigation.selectedTab) { _, _ in
+            navigation.isSubScreenPresented = false
         }
         .background(AppColor.background)
         .sheet(item: $navigation.editorRoute) { route in
@@ -40,14 +46,6 @@ struct MainTabView: View {
                     navigation.expenseDidDelete(expense, at: index)
                 }
             )
-        }
-    }
-
-    /// 스스로 탭바 자리를 비워 두는 탭. 나머지는 아직 옛 레이아웃이다.
-    private var movedToFloatingTabBar: Bool {
-        switch navigation.selectedTab {
-        case .daily, .monthly, .statistics: true
-        case .settings: false
         }
     }
 
