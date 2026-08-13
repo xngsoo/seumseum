@@ -12,7 +12,7 @@ public struct DailyView: View {
     /// 끄는 동안 목록이 따라 움직인 거리.
     @State private var dragOffset: CGFloat = 0
     /// 이번 끌기가 날짜 넘기기인지 목록 스크롤인지.
-    @State private var swipeDirection: DaySwipeGesture.Direction = .undecided
+    @State private var swipeDirection: PageSwipeGesture.Direction = .undecided
 
     public init(
         expenseRepository: any ExpenseRepository,
@@ -34,6 +34,7 @@ public struct DailyView: View {
         .animation(.easeInOut(duration: 0.25), value: viewModel.loadedDay)
         .contentShape(Rectangle())
         .simultaneousGesture(swipe.gesture)
+        .bottomFadeOverlay()
         .overlay(alignment: .bottom) { undoBar }
         .animation(.snappy, value: viewModel.pendingUndo)
         .task(id: LoadKey(day: navigation.selectedDate, version: navigation.dataVersion)) {
@@ -91,8 +92,8 @@ public struct DailyView: View {
         .offset(x: dragOffset)
     }
 
-    private var swipe: DaySwipeGesture {
-        DaySwipeGesture(
+    private var swipe: PageSwipeGesture {
+        PageSwipeGesture(
             offset: $dragOffset,
             direction: $swipeDirection,
             onPrevious: { step(-1) },

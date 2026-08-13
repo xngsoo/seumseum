@@ -52,6 +52,12 @@ public enum AppColor {
     /// 어두운 스낵바 위에서 쓰는 액센트.
     public static let accentUndo = DesignSystemAsset.accentUndo.swiftUIColor
 
+    // MARK: - 증감
+
+    /// 지출이 늘었을 때. 가계부에서 증가는 반가운 소식이 아니라 붉은 쪽이다.
+    public static let trendUp = DesignSystemAsset.trendUp.swiftUIColor
+    public static let trendDown = DesignSystemAsset.trendDown.swiftUIColor
+
     // MARK: - 스낵바
 
     public static let snackbarSurface = DesignSystemAsset.snackbarSurface.swiftUIColor
@@ -87,6 +93,22 @@ public enum AppColor {
     // MARK: - UIKit 짝
 
     public static var uiTextPrimary: UIColor { DesignSystemAsset.textPrimary.color }
+}
+
+public extension View {
+
+    /// 떠 있는 탭바 뒤로 흘러 들어가는 내용을 가린다.
+    /// 화면 아래 끝에 붙으므로 안전 영역 밖까지 덮는다.
+    func bottomFadeOverlay(height: CGFloat = AppSpacing.bottomFadeHeight) -> some View {
+        overlay {
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
+                AppColor.bottomFade.frame(height: height)
+            }
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+        }
+    }
 }
 
 public extension AppColor {

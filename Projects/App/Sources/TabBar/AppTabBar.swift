@@ -2,20 +2,14 @@ import SwiftUI
 import DesignSystem
 import Domain
 
-/// 화면 위에 떠 있는 알약형 탭바. 가운데 추가 버튼은 탭이 아니라 액션이라
-/// 탭 자리를 차지하지 않고 막대 위로 걸쳐 놓는다.
+/// 화면 위에 떠 있는 알약형 탭바. 가운데 추가 버튼은 탭이 아니라 액션이지만
+/// 다른 탭과 같은 줄에 같은 폭으로 놓는다.
 struct AppTabBar: View {
     @Binding var selection: AppTab
     let onAdd: () -> Void
 
-    /// 추가 버튼이 막대 위로 올라간 높이. 버튼과 막대의 중심 거리다.
-    private let addButtonLift: CGFloat = 38
-
     var body: some View {
         bar
-            .overlay(alignment: .center) {
-                addButton.offset(y: -addButtonLift)
-            }
             .padding(.horizontal, AppSpacing.tabBarInset)
             .padding(.bottom, AppSpacing.tabBarBottom)
     }
@@ -23,9 +17,9 @@ struct AppTabBar: View {
     private var bar: some View {
         HStack(spacing: 0) {
             tabButton(.daily)
-            // 가운데 추가 버튼이 지나갈 자리를 양쪽에서 비운다.
-            tabButton(.monthly).padding(.trailing, 34)
-            tabButton(.statistics).padding(.leading, 34)
+            tabButton(.monthly)
+            addButton
+            tabButton(.statistics)
             tabButton(.settings)
         }
         .frame(height: AppSpacing.tabBarHeight)
@@ -60,11 +54,12 @@ struct AppTabBar: View {
     private var addButton: some View {
         Button(action: onAdd) {
             Image(systemName: "plus")
-                .font(.system(size: 24, weight: .light))
+                .font(.system(size: 20, weight: .regular))
                 .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
+                .frame(width: 42, height: 42)
                 .background(AppColor.accent, in: Circle())
-                .shadow(color: AppColor.accent.opacity(0.36), radius: 9, y: 6)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel("지출 추가")

@@ -13,15 +13,23 @@ public enum AppFont {
     /// 화면 한가운데 놓이는 그날의 총액.
     public static let amountHero = scaled(42, weight: .semibold, relativeTo: .largeTitle, digitsAligned: true)
     public static let amountLarge = scaled(28, weight: .semibold, relativeTo: .title1, digitsAligned: true)
+    /// 카드 안에 놓이는 합계.
+    public static let amountMedium = scaled(22, weight: .semibold, relativeTo: .title3, digitsAligned: true)
     /// 목록 행 오른쪽 금액.
     public static let amount = scaled(16, weight: .medium, relativeTo: .body, digitsAligned: true)
     public static let amountSmall = scaled(11, weight: .medium, relativeTo: .caption2, digitsAligned: true)
+    /// 달력 칸의 날짜.
+    public static let calendarDay = scaled(13, weight: .medium, relativeTo: .footnote, digitsAligned: true)
+    /// 달력 칸 아래의 그날 합계. 칸 폭에 맞춰 가장 작다.
+    public static let calendarAmount = scaled(9.5, weight: .medium, relativeTo: .caption2, digitsAligned: true)
 
     // MARK: - 제목
 
     public static let screenTitle = scaled(26, weight: .semibold, relativeTo: .title2)
     /// 날짜 헤더처럼 화면 제목보다 한 단계 작은 자리.
     public static let sectionTitle = scaled(22, weight: .semibold, relativeTo: .title3)
+    /// 좌우 화살표 사이에 놓이는 제목. 달 이름처럼 값이 길어지는 자리에 쓴다.
+    public static let navTitle = scaled(19, weight: .semibold, relativeTo: .title3)
     /// 모달 제목.
     public static let sheetTitle = scaled(15, weight: .semibold, relativeTo: .body)
 

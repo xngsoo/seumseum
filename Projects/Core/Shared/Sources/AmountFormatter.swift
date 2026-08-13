@@ -17,6 +17,12 @@ public enum AmountFormatter {
         return shortStyle.format(value) + unit + "원"
     }
     
+    /// 단위를 뺀 축약 표기. 달력 칸처럼 폭이 좁아 `원` 까지 넣을 수 없는 자리에 쓴다.
+    public static func shortValue(_ amount: Decimal) -> String {
+        let (value, unit) = scaled(amount)
+        return shortStyle.format(value) + unit
+    }
+
     public static func full(_ amount: Decimal) -> String {
         return fullStyle.format(amount) + "원"
     }

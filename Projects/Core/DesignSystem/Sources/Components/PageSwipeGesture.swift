@@ -1,40 +1,53 @@
 import SwiftUI
 
-/// 가로 스와이프로 날짜를 옮긴다.
+/// 가로 스와이프로 앞뒤 장을 넘긴다. 일별 탭의 날짜, 월별 탭의 달처럼
+/// 세로로 스크롤되는 화면 위에서 좌우로 장을 넘길 때 쓴다.
 ///
-/// 화면 전체에 붙어 세로 스크롤과 함께 인식되므로, 움직이기 시작할 때 방향을 한 번
-/// 정하고 그대로 잠근다. 잠그지 않으면 가로로 끄는 동안 목록이 세로로도 함께
-/// 스크롤되어 화면이 대각선으로 끌려간다.
-///
-/// 끄는 동안 손가락을 그대로 따라가지 않고 눌러서 따라간다.
-/// 화면이 통째로 끌려다니면 목록을 읽는 데 방해가 된다.
+/// 세로 스크롤과 함께 인식되므로, 움직이기 시작할 때 방향을 한 번 정하고 그대로
+/// 잠근다. 잠그지 않으면 가로로 끄는 동안 내용이 세로로도 함께 스크롤되어 화면이
+/// 대각선으로 끌려간다. 가로로 정해지면 쓰는 쪽에서 `scrollDisabled` 로 스크롤을
+/// 멈춰야 한다.
 @MainActor
-struct DaySwipeGesture {
+public struct PageSwipeGesture {
 
     /// 이번 끌기가 어느 쪽으로 정해졌는지.
-    enum Direction {
+    public enum Direction: Sendable {
         /// 아직 방향을 정하기에 이르다.
         case undecided
-        /// 날짜를 넘기는 중. 세로 스크롤을 멈춘다.
+        /// 장을 넘기는 중. 세로 스크롤을 멈춘다.
         case horizontal
-        /// 목록을 읽는 중. 날짜는 건드리지 않는다.
+        /// 내용을 읽는 중. 장은 건드리지 않는다.
         case vertical
     }
 
     /// 손을 떼기 전까지 화면이 따라 움직인 거리.
-    @Binding var offset: CGFloat
-    @Binding var direction: Direction
-    let onPrevious: () -> Void
-    let onNext: () -> Void
+    @Binding public var offset: CGFloat
+    @Binding public var direction: Direction
+    public let onPrevious: () -> Void
+    public let onNext: () -> Void
 
-    /// 이만큼 끌어야 날짜가 넘어간다.
+    /// 이만큼 끌어야 장이 넘어간다.
     private let threshold: CGFloat = 60
-    /// 따라 움직이는 비율.
-    private let damping: CGFloat = 0
+    /// 따라 움직이는 비율. 0 이면 따라 움직이지 않는다.
+    private let damping: CGFloat
     /// 이만큼 움직이면 방향을 정한다. 스크롤이 시작되기 전에 판정해야 한다.
     private let decisionDistance: CGFloat = 10
 
-    var gesture: some Gesture {
+    public init(
+        offset: Binding<CGFloat>,
+        direction: Binding<Direction>,
+        damping: CGFloat = 0,
+        onPrevious: @escaping () -> Void,
+        onNext: @escaping () -> Void
+    ) {
+        _offset = offset
+        _direction = direction
+        self.damping = damping
+        self.onPrevious = onPrevious
+        self.onNext = onNext
+    }
+
+    public var gesture: some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
                 decideDirection(value.translation)
@@ -50,7 +63,7 @@ struct DaySwipeGesture {
                     withAnimation(.spring(duration: 0.3)) { offset = 0 }
                     return
                 }
-                // 새 날짜가 자기 자리에서 들어오도록 먼저 되돌린다.
+                // 새 장이 자기 자리에서 들어오도록 먼저 되돌린다.
                 offset = 0
                 if horizontal < 0 { onNext() } else { onPrevious() }
             }
