@@ -7,6 +7,8 @@ import Domain
 struct AppTabBar: View {
     @Binding var selection: AppTab
     let onAdd: () -> Void
+    /// 이미 열려 있는 탭을 다시 눌렀을 때.
+    let onReselect: () -> Void
 
     var body: some View {
         bar
@@ -34,7 +36,12 @@ struct AppTabBar: View {
 
     private func tabButton(_ tab: AppTab) -> some View {
         Button {
-            selection = tab
+            // 같은 탭을 다시 누르면 옮기는 대신 그 화면을 오늘 자리로 되돌린다.
+            if selection == tab {
+                onReselect()
+            } else {
+                selection = tab
+            }
         } label: {
             VStack(spacing: AppSpacing.xs) {
                 Image(systemName: tab.symbolName)
@@ -90,7 +97,7 @@ private extension AppTab {
     @Previewable @State var selection = AppTab.daily
     return VStack {
         Spacer()
-        AppTabBar(selection: $selection, onAdd: {})
+        AppTabBar(selection: $selection, onAdd: {}, onReselect: {})
     }
     .background(AppColor.background)
 }

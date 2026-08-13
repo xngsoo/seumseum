@@ -29,6 +29,10 @@ public struct MonthlyView: View {
         .task(id: LoadKey(month: visibleMonth, version: navigation.dataVersion)) {
             await viewModel.load(month: visibleMonth)
         }
+        // 월별 탭을 다시 누르면 이번 달로 돌아온다.
+        .onChange(of: navigation.homeRequestCount) { _, _ in
+            visibleMonth = CalendarDay.startOfMonth(containing: CalendarDay.today())
+        }
     }
 
     /// 헤더는 자리를 지키고 달 이름만 바뀐다. 갈아 끼우는 것은 달력과 합계뿐이다.

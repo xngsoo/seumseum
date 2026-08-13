@@ -11,12 +11,14 @@ struct AmountKeypad: View {
     let onDelete: () -> Void
     let onClear: () -> Void
 
-    private let rows: [[Key]] = [
-        [.digits("1"), .digits("2"), .digits("3")],
-        [.digits("4"), .digits("5"), .digits("6")],
-        [.digits("7"), .digits("8"), .digits("9")],
-        [.digits("00"), .digits("0"), .delete],
+    private let keys: [Key] = [
+        .digits("1"), .digits("2"), .digits("3"),
+        .digits("4"), .digits("5"), .digits("6"),
+        .digits("7"), .digits("8"), .digits("9"),
+        .digits("00"), .digits("0"), .delete
     ]
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: 3)
 
     private enum Key: Hashable {
         case digits(String)
@@ -24,13 +26,9 @@ struct AmountKeypad: View {
     }
 
     var body: some View {
-        VStack(spacing: AppSpacing.xs) {
-            ForEach(rows.indices, id: \.self) { index in
-                HStack(spacing: AppSpacing.xs) {
-                    ForEach(rows[index], id: \.self) { key in
-                        button(key)
-                    }
-                }
+        LazyVGrid(columns: columns, spacing: 6) {
+            ForEach(keys, id: \.self) { key in
+                button(key)
             }
         }
     }
@@ -39,12 +37,18 @@ struct AmountKeypad: View {
     private func button(_ key: Key) -> some View {
         switch key {
         case let .digits(value):
-            keyButton(label: Text(value).font(.system(size: 24, weight: .regular))) {
+            keyButton(
+                label: Text(value).font(.system(size: 23, weight: .medium)),
+                background: AppColor.surface
+            ) {
                 onDigits(value)
             }
             .accessibilityLabel(value)
         case .delete:
-            keyButton(label: Image(systemName: "delete.left").font(.system(size: 20))) {
+            keyButton(
+                label: Image(systemName: "delete.left").font(.system(size: 19)),
+                background: AppColor.highlight
+            ) {
                 onDelete()
             }
             // 길게 누르면 전체 삭제. 한 자리씩 지우는 것보다 빠르다.
@@ -54,19 +58,27 @@ struct AmountKeypad: View {
         }
     }
 
-    private func keyButton(label: some View, action: @escaping () -> Void) -> some View {
+    private func keyButton(
+        label: some View, background: Color, action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             label
                 .foregroundStyle(AppColor.textPrimary)
                 .frame(maxWidth: .infinity)
-                .frame(height: 46)
-                .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.sm))
+                .frame(height: 50)
+                .background(background, in: RoundedRectangle(cornerRadius: AppSpacing.sm))
+                // 아래로 한 줄 그림자를 두어 키가 판에서 떠 보이게 한다.
+                .shadow(color: AppColor.separatorStrong, radius: 0, y: 1)
         }
         .buttonStyle(.plain)
     }
 }
 
 #Preview {
-    AmountKeypad(onDigits: { _ in }, onDelete: {}, onClear: {})
-        .padding()
+    VStack {
+        Spacer()
+        AmountKeypad(onDigits: { _ in }, onDelete: {}, onClear: {})
+            .padding(5)
+    }
+    .background(AppColor.surfaceSunken)
 }

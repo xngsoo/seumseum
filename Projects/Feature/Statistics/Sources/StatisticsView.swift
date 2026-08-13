@@ -38,6 +38,10 @@ public struct StatisticsView: View {
         .task(id: navigation.dataVersion) {
             await viewModel.load()
         }
+        // 통계 탭을 다시 누르면 오늘이 든 주기로 돌아온다.
+        .onChange(of: navigation.homeRequestCount) { _, _ in
+            Task { await viewModel.goToCurrentPeriod() }
+        }
     }
 
     /// 헤더는 자리를 지키고 기간만 바뀐다. 갈아 끼우는 것은 아래 내용뿐이다.

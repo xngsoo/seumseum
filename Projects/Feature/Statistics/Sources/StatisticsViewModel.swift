@@ -80,6 +80,12 @@ public final class StatisticsViewModel {
         await load()
     }
 
+    /// 오늘이 든 주기로 돌아온다.
+    public func goToCurrentPeriod() async {
+        anchor = CalendarDay.today()
+        await load()
+    }
+
     public func goToNext() async {
         let period = PayPeriodCalculator.period(containing: anchor, setting: setting)
         anchor = period.end

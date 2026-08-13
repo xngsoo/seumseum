@@ -72,6 +72,26 @@ public final class ExpenseEditorViewModel {
         amountDigits.isEmpty ? "" : AmountFormatter.grouped(amount)
     }
 
+    /// 지금 고른 카테고리. 요약 줄이 쓴다.
+    public var selectedCategory: ExpenseCategory? {
+        categories.first { $0.id == categoryID }
+    }
+
+    /// 날짜 줄에 보이는 표기. `8월 13일 (목)`
+    public var dayLabel: String {
+        CalendarDay.headerText(day)
+    }
+
+    /// 하루씩 옮긴다. 달력을 띄우지 않고도 앞뒤 날짜를 고를 수 있다.
+    public func stepDay(_ days: Int) {
+        day = CalendarDay.adding(days: days, to: day)
+    }
+
+    /// 달력에서 고른 날. 달력일만 남기고 시각은 버린다.
+    public func setDay(_ picked: Date) {
+        day = CalendarDay.normalized(picked, in: .gmt)
+    }
+
     // MARK: - 정액 품목 분리
 
     /// 분리 입력을 보여줄지. 수정 화면에서는 감춘다.

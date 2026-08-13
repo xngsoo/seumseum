@@ -6,8 +6,8 @@ import Shared
 public struct DailyView: View {
     @Environment(AppNavigation.self) private var navigation
     @State private var viewModel: DailyViewModel
-    /// 아이콘 36 + 위아래 여백. 글자 크기 설정을 따라간다.
-    @ScaledMetric(relativeTo: .body) private var rowHeight: CGFloat = 66
+    /// 아이콘 36 + 위아래 여백.
+    private let rowHeight: CGFloat = 66
 
     /// 끄는 동안 목록이 따라 움직인 거리.
     @State private var dragOffset: CGFloat = 0
@@ -41,6 +41,8 @@ public struct DailyView: View {
             await viewModel.load(day: navigation.selectedDate)
             receiveDeletionFromEditor()
         }
+        // 일별 탭을 다시 누르면 오늘로 돌아온다.
+        .onChange(of: navigation.homeRequestCount) { _, _ in goToday() }
     }
 
     // MARK: - 하루

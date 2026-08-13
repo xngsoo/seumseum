@@ -12,7 +12,7 @@ struct DailyHeader: View {
     let onToday: () -> Void
 
     /// 날짜 행과 총액 사이의 간격. `오늘로` 버튼이 들어갈 자리이기도 하다.
-    @ScaledMetric(relativeTo: .caption) private var shortcutSlotHeight: CGFloat = 34
+    private let shortcutSlotHeight: CGFloat = 34
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

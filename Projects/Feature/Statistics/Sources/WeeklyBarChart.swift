@@ -10,7 +10,7 @@ struct WeeklyBarChart: View {
     let weeks: [WeeklyTotal]
 
     /// 가장 큰 막대의 높이.
-    @ScaledMetric(relativeTo: .body) private var maxBarHeight: CGFloat = 74
+    private let maxBarHeight: CGFloat = 74
     /// 기록이 없는 주에도 남기는 최소 높이. 자리가 비어 보이지 않게 한다.
     private let minBarHeight: CGFloat = 4
 

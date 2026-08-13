@@ -19,6 +19,8 @@ public struct ScreenHeader<Trailing: View>: View {
         case back(String?, () -> Void)
         /// 모달
         case close(() -> Void)
+        /// 모달. 아이콘 대신 글자로 물러난다. 오른쪽에 저장 같은 글자 버튼이 함께 설 때 쓴다.
+        case cancel(() -> Void)
     }
 
     private let title: String
@@ -51,7 +53,7 @@ public struct ScreenHeader<Trailing: View>: View {
                 trailing()
             }
         }
-        .padding(.horizontal, AppSpacing.lg)
+        .padding(.horizontal, horizontalPadding)
         .padding(.top, topPadding)
         .padding(.bottom, AppSpacing.md)
         .frame(maxWidth: .infinity)
@@ -76,6 +78,15 @@ public struct ScreenHeader<Trailing: View>: View {
         switch style {
         case .screen: AppColor.surface
         case .subScreen, .sheet: AppColor.background
+        }
+    }
+
+    /// 시트의 좌우 버튼은 아래 내용과 같은 선에 맞춘다.
+    /// 화면 가장자리에 붙으면 눌러야 할 글자가 손가락에 가려진다.
+    private var horizontalPadding: CGFloat {
+        switch style {
+        case .screen, .subScreen: AppSpacing.lg
+        case .sheet: AppSpacing.screenMargin
         }
     }
 
@@ -120,6 +131,12 @@ public struct ScreenHeader<Trailing: View>: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("닫기")
+        case let .cancel(action):
+            Button("취소", action: action)
+                .font(AppFont.rowDetail)
+                .foregroundStyle(AppColor.textMuted)
+                .buttonStyle(.plain)
+                .frame(width: 56, alignment: .leading)
         }
     }
 }

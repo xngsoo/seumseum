@@ -59,6 +59,10 @@ public final class AppNavigation {
     /// 데이터가 바뀔 때마다 증가
     public private(set) var dataVersion: Int = 0
 
+    /// 이미 열려 있는 탭을 다시 누른 횟수.
+    /// 탭마다 뜻이 달라(오늘 / 이번 달 / 오늘이 든 주기) 화면이 알아서 해석한다.
+    public private(set) var homeRequestCount: Int = 0
+
     public init(tab: AppTab = .daily, date: Date = CalendarDay.today()) {
         self.selectedTab = tab
         self.selectedDate = date
@@ -93,5 +97,10 @@ public final class AppNavigation {
     /// 목록 화면이 스낵바로 넘겨받은 뒤 통로를 비운다.
     public func clearLastDeleted() {
         lastDeleted = nil
+    }
+
+    /// 보고 있는 탭을 다시 눌렀다. 지금 화면이 오늘 자리로 돌아간다.
+    public func requestHome() {
+        homeRequestCount &+= 1
     }
 }

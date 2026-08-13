@@ -14,14 +14,16 @@ struct ThemePalette {
 
     // MARK: - 바탕과 표면
 
-    /// 바탕만은 밝은 화면에서도 테마마다 다르다. 나머지 밝은 중립색은 공통이다.
+    /// 면은 밝은 화면에서도 테마의 기운을 옅게 머금는다.
+    /// 특히 가라앉은 면은 넓게 깔려서, 고정된 색을 쓰면 테마를 바꿨을 때 혼자 겉돈다.
     var background: Color {
-        dynamic(light: lightBackground, dark: oklch(0.185, 0.012))
+        dynamic(light: oklch(0.971, 0.004), dark: oklch(0.185, 0.012))
     }
 
+    /// 흰 면만은 어느 테마에서도 희다. 카드가 바탕에서 또렷하게 떠오르게 하기 위함이다.
     var surface: Color { dynamic(light: hex(0xFFFFFF), dark: oklch(0.235, 0.014)) }
-    var surfaceRaised: Color { dynamic(light: hex(0xFAF9F7), dark: oklch(0.26, 0.014)) }
-    var surfaceSunken: Color { dynamic(light: hex(0xE9E7E1), dark: oklch(0.22, 0.012)) }
+    var surfaceRaised: Color { dynamic(light: oklch(0.986, 0.003), dark: oklch(0.26, 0.014)) }
+    var surfaceSunken: Color { dynamic(light: oklch(0.928, 0.011), dark: oklch(0.22, 0.012)) }
 
     // MARK: - 글자
 
@@ -47,15 +49,6 @@ struct ThemePalette {
     var snackbarLabel: Color { dynamic(light: hex(0xF2F0EA), dark: oklch(0.20, 0.010)) }
 
     // MARK: - 계산
-
-    private var lightBackground: UIColor {
-        switch theme {
-        case .olive: hex(0xF7F6F3)
-        case .ink: hex(0xF5F6F9)
-        case .clay: hex(0xF9F5F2)
-        case .pine: hex(0xF4F7F4)
-        }
-    }
 
     /// 밝고 어두운 화면을 한 색으로 묶는다. 시스템이 상황에 맞는 쪽을 골라 준다.
     private func dynamic(light: UIColor, dark: UIColor) -> Color {

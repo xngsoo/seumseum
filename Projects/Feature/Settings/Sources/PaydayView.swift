@@ -107,14 +107,8 @@ struct PaydayView: View {
     private var adjustmentSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             sectionTitle("지급일이 주말일 때")
-            HStack(spacing: 3) {
-                ForEach(PaydayAdjustment.allCases, id: \.self) { rule in
-                    adjustmentOption(rule)
-                }
-            }
-            .padding(3)
-            .background(AppColor.separatorFaint, in: RoundedRectangle(cornerRadius: 11))
-            .padding(.horizontal, AppSpacing.lg)
+            SegmentedControl(PaydayAdjustment.allCases, selection: adjustmentBinding) { $0.title }
+                .padding(.horizontal, AppSpacing.lg)
 
             Text("주말(토·일)만 보정합니다. 공휴일은 판정하지 않으니 필요하면 주기 시작일을 직접 조정하세요.")
                 .font(AppFont.caption)
@@ -123,31 +117,6 @@ struct PaydayView: View {
                 .padding(.horizontal, AppSpacing.screenMargin)
                 .padding(.top, 10)
         }
-    }
-
-    private func adjustmentOption(_ rule: PaydayAdjustment) -> some View {
-        let isSelected = viewModel.adjustment == rule
-
-        return Button {
-            Task { await viewModel.setAdjustment(rule) }
-        } label: {
-            Text(rule.title)
-                .font(AppFont.rowCaption)
-                .foregroundStyle(isSelected ? AppColor.textPrimary : AppColor.textMuted)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 9)
-                .background {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 9)
-                            .fill(AppColor.surface)
-                            .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
-                    }
-                }
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
     // MARK: - 뼈대
@@ -173,6 +142,13 @@ struct PaydayView: View {
         Binding(
             get: { viewModel.isPaydayEnabled },
             set: { enabled in Task { await viewModel.setPaydayEnabled(enabled) } }
+        )
+    }
+
+    private var adjustmentBinding: Binding<PaydayAdjustment> {
+        Binding(
+            get: { viewModel.adjustment },
+            set: { rule in Task { await viewModel.setAdjustment(rule) } }
         )
     }
 

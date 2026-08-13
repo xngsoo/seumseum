@@ -22,6 +22,9 @@ struct RootView: View {
             .id(appearance.theme)
             // 끄면 시스템 설정과 무관하게 언제나 밝은 화면이다.
             .preferredColorScheme(appearance.isDarkMode ? .dark : .light)
+            // 글자 크기는 고정한다. 격자·칩·키패드처럼 폭과 높이가 정해진 배치가 많아
+            // 시스템 설정을 따라가면 줄이 겹치거나 잘린다.
+            .dynamicTypeSize(.large)
     }
 
     @ViewBuilder

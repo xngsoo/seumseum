@@ -8,8 +8,6 @@ struct ExpenseRow: View {
     let expense: Expense
     let category: ExpenseCategory?
 
-    @Environment(\.dynamicTypeSize) private var typeSize
-
     var body: some View {
         HStack(spacing: 13) {
             icon
@@ -17,8 +15,7 @@ struct ExpenseRow: View {
                 Text(title)
                     .font(AppFont.rowTitle)
                     .foregroundStyle(AppColor.textPrimary)
-                    // 접근성 글자 크기에서는 한 줄에 담기지 않아 두 줄까지 허용한다.
-                    .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
+                    .lineLimit(1)
                 Text(category?.name ?? "미분류")
                     .font(AppFont.rowCaption)
                     .foregroundStyle(AppColor.textFaint)

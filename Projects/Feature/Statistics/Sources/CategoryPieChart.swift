@@ -13,7 +13,7 @@ struct CategoryPieChart: View {
     /// 도넛에는 모든 카테고리가 그대로 들어간다. 줄이는 것은 범례뿐이다.
     private static let legendLimit = 4
 
-    @ScaledMetric(relativeTo: .body) private var diameter: CGFloat = 132
+    private let diameter: CGFloat = 132
 
     var body: some View {
         HStack(spacing: 22) {

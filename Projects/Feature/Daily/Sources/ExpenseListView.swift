@@ -14,7 +14,7 @@ import Shared
 struct ExpenseListView: View {
     let expenses: [Expense]
     let categories: [UUID: ExpenseCategory]
-    /// 행의 최소 높이. 호출부에서 `@ScaledMetric` 으로 넘겨 글자 크기 설정을 따라간다.
+    /// 행의 최소 높이.
     let rowHeight: CGFloat
     let onSelect: (Expense) -> Void
 

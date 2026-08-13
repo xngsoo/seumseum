@@ -23,9 +23,11 @@ struct MainTabView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             if !navigation.isSubScreenPresented {
-                AppTabBar(selection: $navigation.selectedTab) {
-                    navigation.presentCreateEditor()
-                }
+                AppTabBar(
+                    selection: $navigation.selectedTab,
+                    onAdd: { navigation.presentCreateEditor() },
+                    onReselect: { navigation.requestHome() }
+                )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
