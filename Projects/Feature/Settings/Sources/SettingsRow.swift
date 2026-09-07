@@ -1,11 +1,10 @@
 import SwiftUI
 import DesignSystem
 
-/// 카드 안의 한 줄. 오른쪽에는 값·토글·메뉴 무엇이든 올 수 있다.
-/// 마지막 줄만 `showsSeparator: false` 로 두면 카드 바닥에 선이 남지 않는다.
+/// 묶음 안의 한 줄. 오른쪽에는 값·토글·메뉴 무엇이든 올 수 있다.
+/// 마지막 줄만 `showsSeparator: false` 로 두면 묶음 바닥에 선이 겹치지 않는다.
 struct SettingsRow<Trailing: View>: View {
     let title: String
-    let systemImage: String?
     let titleColor: Color
     let showsSeparator: Bool
     let showsChevron: Bool
@@ -14,7 +13,6 @@ struct SettingsRow<Trailing: View>: View {
 
     init(
         _ title: String,
-        systemImage: String? = nil,
         titleColor: Color = AppColor.textPrimary,
         showsSeparator: Bool = true,
         showsChevron: Bool = false,
@@ -22,7 +20,6 @@ struct SettingsRow<Trailing: View>: View {
         @ViewBuilder trailing: @escaping () -> Trailing
     ) {
         self.title = title
-        self.systemImage = systemImage
         self.titleColor = titleColor
         self.showsSeparator = showsSeparator
         self.showsChevron = showsChevron
@@ -35,6 +32,9 @@ struct SettingsRow<Trailing: View>: View {
             content
                 .contentShape(Rectangle())
                 .onTapGesture(perform: action)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction { action() }
         } else {
             content
         }
@@ -42,14 +42,7 @@ struct SettingsRow<Trailing: View>: View {
 
     private var content: some View {
         VStack(spacing: 0) {
-            HStack(spacing: AppSpacing.md) {
-                if let systemImage {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(AppColor.accent)
-                        .frame(width: 24)
-                }
-
+            HStack(spacing: 10) {
                 Text(title)
                     .font(AppFont.rowTitle)
                     .foregroundStyle(titleColor)
@@ -59,17 +52,17 @@ struct SettingsRow<Trailing: View>: View {
 
                 if showsChevron {
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(AppColor.separator)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(AppColor.textDim)
                 }
             }
-            .padding(.horizontal, AppSpacing.lg)
-            .frame(minHeight: 52)
+            .padding(.horizontal, AppSpacing.screenMargin)
+            .padding(.vertical, 15)
 
             if showsSeparator {
-                Divider()
-                    .overlay(AppColor.separator)
-                    .padding(.leading, AppSpacing.lg)
+                Rectangle()
+                    .fill(AppColor.separatorFaint)
+                    .frame(height: 1)
             }
         }
     }
@@ -78,7 +71,6 @@ struct SettingsRow<Trailing: View>: View {
 extension SettingsRow where Trailing == EmptyView {
     init(
         _ title: String,
-        systemImage: String? = nil,
         titleColor: Color = AppColor.textPrimary,
         showsSeparator: Bool = true,
         showsChevron: Bool = false,
@@ -86,7 +78,6 @@ extension SettingsRow where Trailing == EmptyView {
     ) {
         self.init(
             title,
-            systemImage: systemImage,
             titleColor: titleColor,
             showsSeparator: showsSeparator,
             showsChevron: showsChevron,
@@ -96,17 +87,32 @@ extension SettingsRow where Trailing == EmptyView {
     }
 }
 
+/// 줄 오른쪽에 값만 적을 때 쓰는 표기.
+struct SettingsValue: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(AppFont.rowDetail)
+            .foregroundStyle(AppColor.textFaint)
+            .lineLimit(1)
+    }
+}
+
 #Preview {
     VStack(spacing: 0) {
-        SettingsRow("카테고리 관리", systemImage: "square.grid.2x2", showsChevron: true, action: {})
+        SettingsRow(
+            "카테고리 관리",
+            showsChevron: true,
+            action: {},
+            trailing: { SettingsValue(text: "8개") }
+        )
         SettingsRow("급여일") {
-            Text("매월 25일")
-                .font(AppFont.rowDetail)
-                .foregroundStyle(AppColor.textSecondary)
+            SettingsValue(text: "매월 25일")
         }
         SettingsRow("데이터 초기화", titleColor: AppColor.category(.red), showsSeparator: false, action: {})
     }
-    .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
-    .padding()
+    .background(AppColor.surface)
+    .frame(maxHeight: .infinity, alignment: .top)
     .background(AppColor.background)
 }

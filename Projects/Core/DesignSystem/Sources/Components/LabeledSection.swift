@@ -11,11 +11,11 @@ public struct LabeledSection<Content: View>: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+        VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(AppFont.caption)
-                .foregroundStyle(AppColor.textSecondary)
-                .padding(.horizontal, AppSpacing.xs)
+                .font(AppFont.overline)
+                .tracking(1.2)
+                .foregroundStyle(AppColor.textFaint)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -3,29 +3,26 @@ import DesignSystem
 import Domain
 import Shared
 
-/// 목록 한 줄의 내용. 높이·배경·구분선은 `ReorderableList` 가 맡는다.
+/// 목록 한 줄의 내용. 높이·배경·구분선은 `ExpenseListView` 가 맡는다.
 struct ExpenseRow: View {
     let expense: Expense
     let category: ExpenseCategory?
 
-    @Environment(\.dynamicTypeSize) private var typeSize
-
     var body: some View {
-        HStack(spacing: AppSpacing.md) {
+        HStack(spacing: 13) {
             icon
-            VStack(alignment: .leading, spacing: AppSpacing.xs) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
                     .font(AppFont.rowTitle)
                     .foregroundStyle(AppColor.textPrimary)
-                    // 접근성 글자 크기에서는 한 줄에 담기지 않아 두 줄까지 허용한다.
-                    .lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
+                    .lineLimit(1)
                 Text(category?.name ?? "미분류")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(AppColor.textSecondary)
+                    .font(AppFont.rowCaption)
+                    .foregroundStyle(AppColor.textFaint)
                     .lineLimit(1)
             }
             Spacer(minLength: AppSpacing.sm)
-            Text(AmountFormatter.full(expense.amount))
+            Text(AmountFormatter.grouped(expense.amount))
                 .font(AppFont.amount)
                 .foregroundStyle(AppColor.textPrimary)
                 .lineLimit(1)
@@ -39,14 +36,18 @@ struct ExpenseRow: View {
 
     private var icon: some View {
         Image(systemName: category?.symbolName ?? "questionmark")
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(.white)
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(tint)
             .frame(width: 36, height: 36)
-            .background(tint, in: RoundedRectangle(cornerRadius: AppSpacing.sm))
+            .background(softTint, in: Circle())
     }
 
     private var tint: Color {
-        category.map { AppColor.category($0.colorToken) } ?? AppColor.textSecondary
+        category.map { AppColor.category($0.colorToken) } ?? AppColor.textMuted
+    }
+
+    private var softTint: Color {
+        category.map { AppColor.categorySoft($0.colorToken) } ?? AppColor.highlight
     }
 }
 
@@ -58,6 +59,6 @@ struct ExpenseRow: View {
         category: food
     )
     .padding(.horizontal, AppSpacing.screenMargin)
-    .frame(height: 68)
-    .background(AppColor.surface)
+    .frame(height: 66)
+    .background(AppColor.background)
 }

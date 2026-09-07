@@ -25,6 +25,9 @@ public final class SettingsViewModel {
 
     public private(set) var splitItem: SplitItem?
 
+    public private(set) var theme: AppTheme = .default
+    public private(set) var isDarkMode = false
+
     private var hasSeenNotice = false
     private let settingsRepository: any SettingsRepository
     private let dataResetting: any DataResetting
@@ -59,6 +62,8 @@ public final class SettingsViewModel {
             let settings = try await settingsRepository.settings()
             hasSeenNotice = settings.hasSeenPaydayNotice
             splitItem = settings.splitItem
+            theme = settings.theme
+            isDarkMode = settings.isDarkMode
             switch settings.payPeriod {
             case .calendarMonth:
                 isPaydayEnabled = false
@@ -89,6 +94,21 @@ public final class SettingsViewModel {
     public func setAdjustment(_ rule: PaydayAdjustment) async {
         adjustment = rule
         await save()
+    }
+
+    public func setTheme(_ theme: AppTheme) async {
+        self.theme = theme
+        await save()
+    }
+
+    public func setDarkMode(_ isOn: Bool) async {
+        isDarkMode = isOn
+        await save()
+    }
+
+    /// 급여일 행에 보이는 요약. `매월 25일`
+    public var paydaySummary: String {
+        isPaydayEnabled ? "매월 \(paydayDay.title)" : "사용 안 함"
     }
 
     public func setSplitItem(_ item: SplitItem?) async {
@@ -122,7 +142,9 @@ public final class SettingsViewModel {
                 AppSettings(
                     payPeriod: currentSetting,
                     hasSeenPaydayNotice: hasSeenNotice,
-                    splitItem: splitItem
+                    splitItem: splitItem,
+                    theme: theme,
+                    isDarkMode: isDarkMode
                 )
             )
             errorMessage = nil

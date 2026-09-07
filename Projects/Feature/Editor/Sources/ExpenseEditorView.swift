@@ -7,17 +7,27 @@ public struct ExpenseEditorView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: ExpenseEditorViewModel
+    /// 아래 절반에 열려 있는 판. 들어오면 금액부터 넣는다.
+    @State private var pane: EditorPane = .amount
+    @FocusState private var isMemoFocused: Bool
+    @State private var isDeleteConfirmPresented = false
+
+    /// 판이 바뀌어도 화면이 흔들리지 않도록 높이를 고정한다. 키패드가 가장 크다.
+    private let paneHeight: CGFloat = 242
 
     private let onSaved: () -> Void
+    private let onDeleted: (Expense, Int) -> Void
 
     public init(
         route: EditorRoute,
         expenseRepository: any ExpenseRepository,
         categoryRepository: any CategoryRepository,
         settingsRepository: any SettingsRepository,
-        onSaved: @escaping () -> Void
+        onSaved: @escaping () -> Void,
+        onDeleted: @escaping (Expense, Int) -> Void
     ) {
         self.onSaved = onSaved
+        self.onDeleted = onDeleted
         _viewModel = State(
             initialValue: ExpenseEditorViewModel(
                 route: route,
@@ -30,178 +40,162 @@ public struct ExpenseEditorView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            ScreenHeader(viewModel.title, style: .sheet, leading: .close { dismiss() })
-
-            // 키패드와 저장 버튼은 항상 고정이고, 넘치는 경우에만 위쪽이 스크롤된다.
-            // 카테고리 12개 + 작은 화면 조합에서만 실제로 스크롤이 생긴다.
-            ScrollView {
-                VStack(spacing: AppSpacing.lg) {
-                    amountCard
-                    categorySection
-                    splitSection
-                    detailCard
-                }
-                .padding(.horizontal, AppSpacing.screenMargin)
-                .padding(.vertical, AppSpacing.lg)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+            header
+            // 내용을 칠 때는 요약을 접는다. 키보드가 올라오면 남은 높이가 모자라
+            // 위쪽이 눌리면서 글자와 여백이 어긋난다. 판만 키보드 위로 올린다.
+            if !isMemoFocused {
+                Spacer(minLength: AppSpacing.md)
+                summary
+                deleteButton
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
+            Spacer(minLength: AppSpacing.md)
+            paneSection
         }
+        .animation(.easeInOut(duration: 0.22), value: isMemoFocused)
         .background(AppColor.background)
-        .safeAreaInset(edge: .bottom) { bottomBar }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .dimmedAlert(
+            isPresented: $isDeleteConfirmPresented,
+            title: "이 지출을 삭제할까요?",
+            message: "목록으로 돌아가면 잠시 동안 되돌릴 수 있습니다.",
+            confirmTitle: "삭제",
+            isDestructive: true,
+            onConfirm: delete
+        )
         .task { await viewModel.load() }
     }
 
-    // MARK: - 금액
+    // MARK: - 머리
 
-    private var amountCard: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 2) {
-            Text(viewModel.groupedAmount.isEmpty ? "0" : viewModel.groupedAmount)
-                .font(AppFont.amountLarge)
-                .foregroundStyle(
-                    viewModel.groupedAmount.isEmpty ? AppColor.textSecondary : AppColor.textPrimary
-                )
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            Text("원")
-                .font(AppFont.amountLarge)
-                .foregroundStyle(AppColor.textPrimary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, AppSpacing.lg)
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("금액 \(viewModel.formattedAmount)")
-    }
-
-    // MARK: - 카테고리
-
-    /// 격자를 카드 하나에 담고 고르지 않은 칸은 배경을 비운다.
-    /// 칸마다 배경을 깔면 카드 안에 카드가 겹친 것처럼 보인다.
-    private var categorySection: some View {
-        LabeledSection("카테고리") {
-            CategoryPicker(
-                categories: viewModel.categories,
-                selection: $viewModel.categoryID
-            )
-            .padding(AppSpacing.md)
-            .background(
-                AppColor.surface,
-                in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
-            )
+    /// 저장은 오른쪽 위에 둔다. 아래는 입력 판이 다 차지해서 버튼을 둘 자리가 없다.
+    private var header: some View {
+        ScreenHeader(viewModel.title, style: .sheet, leading: .cancel { dismiss() }) {
+            Button("저장", action: save)
+                .font(AppFont.rowDetail.weight(.semibold))
+                .foregroundStyle(viewModel.canSave ? AppColor.accent : AppColor.textDim)
+                .buttonStyle(.plain)
+                .disabled(!viewModel.canSave)
+                .frame(width: 56, alignment: .trailing)
         }
     }
 
-    /// 정액 품목 분리. 설정에서 켠 경우에만 보인다.
-    /// 기능이 보류 중이라 `FeatureFlag.splitItem` 이 꺼져 있으면 아예 그리지 않는다.
+    /// 지우기는 요약 아래에 홀로 둔다. 저장 옆에 붙여 두면 손이 미끄러지기 쉽고,
+    /// 지우려는 대상이 바로 위에 보이는 자리가 무엇을 지우는지도 분명하다.
     @ViewBuilder
-    private var splitSection: some View {
-        if FeatureFlag.splitItem, viewModel.showsSplitField, let item = viewModel.splitItem {
-            LabeledSection("\(item.name) 분리") {
-                VStack(alignment: .leading, spacing: AppSpacing.xs) {
-                    Stepper(value: $viewModel.splitQuantity, in: 0 ... 99) {
-                        Text("\(viewModel.splitQuantity)\(item.unitLabel)")
-                            .font(AppFont.amount)
-                            .foregroundStyle(AppColor.textPrimary)
-                    }
-                    .padding(.horizontal, AppSpacing.lg)
-                    .padding(.vertical, AppSpacing.sm)
-                    .background(
-                        AppColor.surface,
-                        in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
-                    )
-
-                    if let preview = viewModel.splitPreview {
-                        Text(preview)
-                            .font(AppFont.caption)
-                            .foregroundStyle(
-                                viewModel.isSplitAmountValid
-                                    ? AppColor.accent : AppColor.category(.red)
-                            )
-                            .padding(.horizontal, AppSpacing.xs)
-                    }
-                }
+    private var deleteButton: some View {
+        if viewModel.isEditing {
+            Button {
+                isDeleteConfirmPresented = true
+            } label: {
+                Label("삭제", systemImage: "trash")
+                    .font(AppFont.rowCaption)
+                    .foregroundStyle(AppColor.category(.red))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(AppColor.categorySoft(.red), in: Capsule())
             }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isSaving)
+            .padding(.top, 28)
         }
     }
 
-    // MARK: - 날짜와 내용
+    // MARK: - 금액과 요약
 
-    /// 값이 항상 보이므로 저장 직전에 확인할 수 있다.
-    private var detailCard: some View {
+    private var summary: some View {
+        EditorSummary(
+            category: viewModel.selectedCategory,
+            amountText: viewModel.groupedAmount,
+            memo: viewModel.memo,
+            dayLabel: viewModel.dayLabel,
+            isEditingAmount: pane == .amount,
+            onSelectCategory: { paneBinding.wrappedValue = .category },
+            onSelectAmount: { paneBinding.wrappedValue = .amount },
+            onSelectDetail: { paneBinding.wrappedValue = .detail }
+        )
+        .padding(.horizontal, AppSpacing.screenMargin)
+    }
+
+    // MARK: - 입력 판
+
+    private var paneSection: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("날짜")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(AppColor.textSecondary)
-                Spacer()
-                DatePicker("", selection: $viewModel.day, displayedComponents: .date)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                    .environment(\.calendar, CalendarDay.calendar)
-                    .environment(\.timeZone, CalendarDay.calendar.timeZone)
-                    .environment(\.locale, CalendarDay.locale)
-            }
-            .padding(.horizontal, AppSpacing.lg)
-            .frame(height: 52)
+            SegmentedControl(EditorPane.allCases, selection: paneBinding) { $0.title }
+                .padding(.horizontal, AppSpacing.screenMargin)
+                .padding(.top, AppSpacing.md)
+                .padding(.bottom, 10)
 
-            Divider()
-                .overlay(AppColor.separator)
-                .padding(.leading, AppSpacing.lg)
-
-            HStack(spacing: AppSpacing.md) {
-                Text("내용")
-                    .font(AppFont.rowDetail)
-                    .foregroundStyle(AppColor.textSecondary)
-                CaretEndTextField("어디에 썼나요?", text: $viewModel.memo, alignment: .right)
-            }
-            .padding(.horizontal, AppSpacing.lg)
-            .frame(height: 52)
+            pane(for: pane)
+                // 판마다 내용 높이가 달라도 같은 자리를 차지해야 요약이 흔들리지 않는다.
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: paneHeight,
+                    maxHeight: paneHeight,
+                    alignment: .top
+                )
+                .padding(.horizontal, AppSpacing.md)
+                .padding(.bottom, 26)
         }
-        .background(AppColor.surface, in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
+        .background(AppColor.surfaceSunken)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(AppColor.separator)
+                .frame(height: 1)
+        }
+        .animation(.easeInOut(duration: 0.18), value: pane)
     }
 
-    // MARK: - 하단
-
-    /// 메모를 입력할 때는 시스템 키보드가 키패드를 가린다.
-    /// 저장 버튼은 두 경우 모두 남아 위치가 흔들리지 않는다.
-    private var bottomBar: some View {
-        VStack(spacing: AppSpacing.sm) {
+    @ViewBuilder
+    private func pane(for pane: EditorPane) -> some View {
+        switch pane {
+        case .amount:
             AmountKeypad(
                 onDigits: { viewModel.appendDigits($0) },
                 onDelete: { viewModel.deleteLastDigit() },
                 onClear: { viewModel.clearAmount() }
             )
-            saveButton
+            .transition(.opacity)
+        case .category:
+            CategoryPicker(
+                categories: viewModel.categories,
+                selection: $viewModel.categoryID
+            )
+            .padding(.horizontal, AppSpacing.sm)
+            .transition(.opacity)
+        case .detail:
+            EditorDetailPane(viewModel: viewModel, isMemoFocused: $isMemoFocused)
+                .transition(.opacity)
         }
-        .padding(.horizontal, AppSpacing.screenMargin)
-        .padding(.top, AppSpacing.sm)
-        .padding(.bottom, AppSpacing.xs)
-        .background(AppColor.background)
     }
 
-    private var saveButton: some View {
-        Button(action: save) {
-            Text(viewModel.isEditing ? "수정 완료" : "저장")
-                .font(AppFont.rowTitle)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, AppSpacing.md)
-                .background(
-                    viewModel.canSave ? AppColor.accent : AppColor.separator,
-                    in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
-                )
-        }
-        .disabled(!viewModel.canSave)
+    // MARK: - 바인딩
+
+    /// 판을 옮길 때 메모 입력에서 손을 뗀다. 키보드가 남으면 다음 판을 덮는다.
+    private var paneBinding: Binding<EditorPane> {
+        Binding(
+            get: { pane },
+            set: { next in
+                if next != .detail { isMemoFocused = false }
+                pane = next
+            }
+        )
     }
+
+    // MARK: - 동작
 
     private func save() {
         Task {
             if await viewModel.save() {
                 onSaved()
+                dismiss()
+            }
+        }
+    }
+
+    private func delete() {
+        guard let expense = viewModel.editingExpense else { return }
+        Task {
+            if let index = await viewModel.delete() {
+                onDeleted(expense, index)
                 dismiss()
             }
         }

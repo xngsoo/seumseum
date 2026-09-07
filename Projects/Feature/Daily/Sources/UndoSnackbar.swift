@@ -5,21 +5,28 @@ struct UndoSnackbar: View {
     let onUndo: () -> Void
 
     var body: some View {
-        HStack {
-            Text("항목을 삭제했습니다")
+        HStack(spacing: AppSpacing.md) {
+            Text("1건 삭제됨")
                 .font(AppFont.rowDetail)
-                .foregroundStyle(AppColor.surface)
-            Spacer(minLength: AppSpacing.md)
-            Button("취소", action: onUndo)
-                .font(AppFont.rowTitle)
-                .foregroundStyle(AppColor.accent)
+                .foregroundStyle(AppColor.snackbarLabel)
+            Spacer(minLength: 0)
+            Button("실행취소", action: onUndo)
+                .font(AppFont.rowDetail.weight(.semibold))
+                .foregroundStyle(AppColor.accentUndo)
         }
         .padding(.horizontal, AppSpacing.lg)
-        .padding(.vertical, AppSpacing.md)
-        .background(AppColor.textPrimary, in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius))
+        .padding(.vertical, 13)
+        .background(
+            AppColor.snackbarSurface,
+            in: RoundedRectangle(cornerRadius: AppSpacing.cornerRadius)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 10, y: 6)
     }
 }
 
 #Preview {
     UndoSnackbar {}
+        .padding(18)
+        .frame(maxHeight: .infinity, alignment: .bottom)
+        .background(AppColor.background)
 }

@@ -18,11 +18,14 @@ public final class DailyViewModel {
     public private(set) var errorMessage: String?
     public private(set) var pendingUndo: PendingUndo?
 
-    /// 마지막으로 조회한 날짜. 소유자는 AppNavigation이고 여기서는 캐시로만 쓴다.
+    /// 화면에 실제로 그려지고 있는 날짜. 조회가 끝나야 바뀐다.
+    /// 날짜 전환 애니메이션은 이 값을 기준으로 삼아야 이전 날짜 위에 새 목록이
+    /// 잠깐 겹쳐 보이는 일이 없다.
+    public private(set) var loadedDay: Date = CalendarDay.today()
+
+    /// 마지막으로 조회를 요청한 날짜. 소유자는 AppNavigation이고 여기서는 캐시로만 쓴다.
     private var day: Date = CalendarDay.today()
     private var undoTimeout: Task<Void, Never>?
-    /// 드래그를 시작하기 전의 순서. 저장에 실패하면 이 순서로 되돌린다.
-    private var orderBeforeReorder: [Expense]?
 
     private let expenseRepository: any ExpenseRepository
     private let categoryRepository: any CategoryRepository
@@ -60,59 +63,21 @@ public final class DailyViewModel {
                 allCategories.map { ($0.id, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
+            loadedDay = day
         } catch {
             errorMessage = error.localizedDescription
             expenses = []
+            loadedDay = day
         }
         isLoading = false
     }
 
-    // MARK: - 재정렬
+    // MARK: - 삭제 취소
 
-    public func move(from offsets: IndexSet, to destination: Int) async {
-        var reordered = expenses
-        reordered.move(fromOffsets: offsets, toOffset: destination)
-        orderBeforeReorder = orderBeforeReorder ?? expenses
-        expenses = reordered
-        await commitReorder()
-    }
-
-    /// 드래그하는 동안 화면 순서만 바꾼다. 저장은 `commitReorder()` 가 한 번만 한다.
-    public func moveLocally(from source: Int, to destination: Int) {
-        guard source != destination,
-              expenses.indices.contains(source),
-              expenses.indices.contains(destination) else { return }
-
-        orderBeforeReorder = orderBeforeReorder ?? expenses
-        var reordered = expenses
-        reordered.insert(reordered.remove(at: source), at: destination)
-        expenses = reordered
-    }
-
-    /// 드래그를 끝낼 때 바뀐 순서를 저장한다. 실패하면 시작 전 순서로 되돌린다.
-    public func commitReorder() async {
-        guard let previous = orderBeforeReorder else { return }
-        orderBeforeReorder = nil
-        guard previous.map(\.id) != expenses.map(\.id) else { return }
-
-        do {
-            try await expenseRepository.reorder(expenses.map(\.id), on: day)
-        } catch {
-            expenses = previous
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    // MARK: - 삭제와 취소
-
-    public func delete(_ expense: Expense) async {
-        do {
-            let index = try await expenseRepository.delete(id: expense.id)
-            expenses.removeAll { $0.id == expense.id }
-            startUndoWindow(PendingUndo(expense: expense, index: index))
-        } catch {
-            errorMessage = error.localizedDescription
-        }
+    /// 수정 화면이 지운 기록을 넘겨받아 취소할 수 있는 시간을 연다.
+    /// 삭제 자체는 수정 화면이 이미 마쳤다.
+    public func registerUndo(expense: Expense, at index: Int) {
+        startUndoWindow(PendingUndo(expense: expense, index: index))
     }
 
     public func undoDelete() async {

@@ -40,7 +40,7 @@ struct MonthlyViewModelTests {
         #expect(viewModel.monthTotal == .zero)
     }
 
-    @Test("조회 범위는 그 달의 반개구간이다")
+    @Test("조회 범위는 그 달과 지난달의 반개구간이다")
     func requestedRange() async throws {
         let mid = try day(2026, 8, 15)
         let repository = FixedExpenseRepository(expenses: [])
@@ -48,9 +48,10 @@ struct MonthlyViewModelTests {
 
         await viewModel.load(month: mid)
 
-        let requested = await repository.lastRange
-        #expect(requested?.lowerBound == (try day(2026, 8, 1)))
-        #expect(requested?.upperBound == (try day(2026, 9, 1)))
+        let requested = await repository.requestedRanges
+        #expect(requested.contains((try day(2026, 8, 1)) ..< (try day(2026, 9, 1))))
+        // 지난달은 같은 기간을 견주기 위해 함께 읽는다.
+        #expect(requested.contains((try day(2026, 7, 1)) ..< (try day(2026, 8, 1))))
     }
 
     @Test("조회에 실패하면 합계를 비운다")
@@ -67,7 +68,7 @@ struct MonthlyViewModelTests {
 private actor FixedExpenseRepository: ExpenseRepository {
     private let expenses: [Expense]
     private let failure: DomainError?
-    private(set) var lastRange: Range<Date>?
+    private(set) var requestedRanges: [Range<Date>] = []
 
     init(expenses: [Expense], failure: DomainError? = nil) {
         self.expenses = expenses
@@ -77,7 +78,7 @@ private actor FixedExpenseRepository: ExpenseRepository {
     func expenses(on day: Date) async throws -> [Expense] { [] }
 
     func expenses(in range: Range<Date>) async throws -> [Expense] {
-        lastRange = range
+        requestedRanges.append(range)
         if let failure { throw failure }
         return expenses.filter { range.contains($0.date) }
     }

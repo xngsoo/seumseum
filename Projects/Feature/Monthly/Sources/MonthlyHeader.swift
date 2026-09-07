@@ -2,31 +2,24 @@ import SwiftUI
 import DesignSystem
 import Shared
 
+/// 탭 2 상단. 달력과 함께 스크롤된다.
 struct MonthlyHeader: View {
     let month: Date
-    let total: Decimal
     let onPrevious: () -> Void
     let onNext: () -> Void
 
     var body: some View {
-        VStack(alignment: .center, spacing: AppSpacing.xs) {
-            HStack(spacing: AppSpacing.sm) {
-                stepButton(systemImage: "chevron.left", label: "이전 달", action: onPrevious)
-                Spacer()
-                Text(CalendarDay.monthText(month))
-                    .font(AppFont.screenTitle)
-                    .foregroundStyle(AppColor.textPrimary)
-                Spacer()
-                stepButton(systemImage: "chevron.right", label: "다음 달", action: onNext)
-            }
-            Text(AmountFormatter.full(total))
-                .font(AppFont.amountLarge)
+        HStack(spacing: AppSpacing.sm) {
+            stepButton(systemImage: "chevron.left", label: "이전 달", action: onPrevious)
+            Spacer()
+            Text(CalendarDay.monthText(month))
+                .font(AppFont.navTitle)
                 .foregroundStyle(AppColor.textPrimary)
+            Spacer()
+            stepButton(systemImage: "chevron.right", label: "다음 달", action: onNext)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, AppSpacing.screenMargin)
-        .padding(.vertical, AppSpacing.lg)
-        .background(AppColor.surface)
+        .frame(height: 34)
+        .padding(.horizontal, 6)
     }
 
     private func stepButton(
@@ -34,9 +27,9 @@ struct MonthlyHeader: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(AppColor.textSecondary)
-                .frame(width: 32, height: 32)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(AppColor.textFaint)
+                .frame(width: 34, height: 34)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -45,5 +38,10 @@ struct MonthlyHeader: View {
 }
 
 #Preview {
-    MonthlyHeader(month: CalendarDay.today(), total: 1_535_000, onPrevious: {}, onNext: {})
+    VStack {
+        MonthlyHeader(month: CalendarDay.today(), onPrevious: {}, onNext: {})
+        Spacer()
+    }
+    .padding(.horizontal, AppSpacing.lg)
+    .background(AppColor.background)
 }

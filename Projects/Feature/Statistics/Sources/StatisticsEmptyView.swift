@@ -3,22 +3,21 @@ import DesignSystem
 
 struct StatisticsEmptyView: View {
     var body: some View {
-        VStack(spacing: AppSpacing.sm) {
-            Image(systemName: "chart.pie")
-                .font(.system(size: 40))
-                .foregroundStyle(AppColor.separator)
-            Text("이 주기에는 기록이 없어요")
-                .font(AppFont.rowTitle)
-                .foregroundStyle(AppColor.textPrimary)
-            Text("지출을 추가하면 여기에 요약이 보입니다")
-                .font(AppFont.caption)
-                .foregroundStyle(AppColor.textSecondary)
+        VStack(alignment: .center, spacing: AppSpacing.md) {
+            Text("이 주기에는 기록이 없습니다")
+                .font(AppFont.rowDetail)
+                .foregroundStyle(AppColor.textFaint)
+            Text("지출을 추가하면 통계를 확인할 수 있습니다")
+                .font(AppFont.rowCaption)
+                .foregroundStyle(AppColor.textDim)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, AppSpacing.xl * 2)
+        .padding(.top, 76)
     }
 }
 
 #Preview {
     StatisticsEmptyView()
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(AppColor.background)
 }

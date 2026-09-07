@@ -48,8 +48,13 @@ public final class ExpenseEditorViewModel {
     }
 
     public var isEditing: Bool {
-        if case .edit = route { return true }
-        return false
+        editingExpense != nil
+    }
+
+    /// 수정 중인 원본. 추가 화면이면 nil 이다.
+    public var editingExpense: Expense? {
+        if case let .edit(expense) = route { return expense }
+        return nil
     }
 
     public var title: String { isEditing ? "지출 수정" : "지출 추가" }
@@ -65,6 +70,26 @@ public final class ExpenseEditorViewModel {
     
     public var groupedAmount: String {
         amountDigits.isEmpty ? "" : AmountFormatter.grouped(amount)
+    }
+
+    /// 지금 고른 카테고리. 요약 줄이 쓴다.
+    public var selectedCategory: ExpenseCategory? {
+        categories.first { $0.id == categoryID }
+    }
+
+    /// 날짜 줄에 보이는 표기. `8월 13일 (목)`
+    public var dayLabel: String {
+        CalendarDay.headerText(day)
+    }
+
+    /// 하루씩 옮긴다. 달력을 띄우지 않고도 앞뒤 날짜를 고를 수 있다.
+    public func stepDay(_ days: Int) {
+        day = CalendarDay.adding(days: days, to: day)
+    }
+
+    /// 달력에서 고른 날. 달력일만 남기고 시각은 버린다.
+    public func setDay(_ picked: Date) {
+        day = CalendarDay.normalized(picked, in: .gmt)
     }
 
     // MARK: - 정액 품목 분리
@@ -176,6 +201,21 @@ public final class ExpenseEditorViewModel {
         } catch {
             errorMessage = error.localizedDescription
             return false
+        }
+    }
+
+    /// 지운 자리를 돌려준다. 실패하면 nil.
+    /// 곧바로 지우고 목록 화면이 취소 스낵바를 띄운다. soft delete 는 하지 않는다.
+    public func delete() async -> Int? {
+        guard let editingExpense, !isSaving else { return nil }
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            return try await expenseRepository.delete(id: editingExpense.id)
+        } catch {
+            errorMessage = error.localizedDescription
+            return nil
         }
     }
 

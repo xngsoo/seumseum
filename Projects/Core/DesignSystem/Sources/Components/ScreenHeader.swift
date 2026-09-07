@@ -15,10 +15,12 @@ public struct ScreenHeader<Trailing: View>: View {
 
     public enum Leading {
         case none
-        /// 밀어서 들어온 화면
-        case back(() -> Void)
+        /// 밀어서 들어온 화면. 이름을 주면 어디로 돌아가는지 함께 적는다.
+        case back(String?, () -> Void)
         /// 모달
         case close(() -> Void)
+        /// 모달. 아이콘 대신 글자로 물러난다. 오른쪽에 저장 같은 글자 버튼이 함께 설 때 쓴다.
+        case cancel(() -> Void)
     }
 
     private let title: String
@@ -51,11 +53,18 @@ public struct ScreenHeader<Trailing: View>: View {
                 trailing()
             }
         }
-        .padding(.horizontal, AppSpacing.lg)
+        .padding(.horizontal, horizontalPadding)
         .padding(.top, topPadding)
         .padding(.bottom, AppSpacing.md)
         .frame(maxWidth: .infinity)
         .background(background)
+        .overlay(alignment: .bottom) {
+            if style == .subScreen {
+                Rectangle()
+                    .fill(AppColor.separator)
+                    .frame(height: 1)
+            }
+        }
     }
 
     private var titleFont: Font {
@@ -67,8 +76,17 @@ public struct ScreenHeader<Trailing: View>: View {
 
     private var background: Color {
         switch style {
-        case .screen, .subScreen: AppColor.surface
-        case .sheet: AppColor.background
+        case .screen: AppColor.surface
+        case .subScreen, .sheet: AppColor.background
+        }
+    }
+
+    /// 시트의 좌우 버튼은 아래 내용과 같은 선에 맞춘다.
+    /// 화면 가장자리에 붙으면 눌러야 할 글자가 손가락에 가려진다.
+    private var horizontalPadding: CGFloat {
+        switch style {
+        case .screen, .subScreen: AppSpacing.lg
+        case .sheet: AppSpacing.screenMargin
         }
     }
 
@@ -86,16 +104,23 @@ public struct ScreenHeader<Trailing: View>: View {
         switch leading {
         case .none:
             EmptyView()
-        case let .back(action):
+        case let .back(parentTitle, action):
             Button(action: action) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(AppColor.textPrimary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
+                HStack(spacing: 2) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .medium))
+                    if let parentTitle {
+                        Text(parentTitle)
+                            .font(AppFont.rowDetail)
+                    }
+                }
+                .foregroundStyle(AppColor.accentInk)
+                .frame(height: 32)
+                .padding(.horizontal, AppSpacing.sm)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("뒤로")
+            .accessibilityLabel(parentTitle.map { "\($0)(으)로 돌아가기" } ?? "뒤로")
         case let .close(action):
             Button(action: action) {
                 Image(systemName: "xmark")
@@ -106,6 +131,12 @@ public struct ScreenHeader<Trailing: View>: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("닫기")
+        case let .cancel(action):
+            Button("취소", action: action)
+                .font(AppFont.rowDetail)
+                .foregroundStyle(AppColor.textMuted)
+                .buttonStyle(.plain)
+                .frame(width: 56, alignment: .leading)
         }
     }
 }
@@ -119,7 +150,7 @@ public extension ScreenHeader where Trailing == EmptyView {
 #Preview {
     VStack(spacing: AppSpacing.lg) {
         ScreenHeader("설정")
-        ScreenHeader("카테고리 관리", style: .subScreen, leading: .back({})) {
+        ScreenHeader("카테고리 관리", style: .subScreen, leading: .back("설정", {})) {
             Image(systemName: "plus")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(AppColor.accent)

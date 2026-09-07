@@ -2,31 +2,31 @@ import SwiftUI
 import DesignSystem
 import Shared
 
+/// 탭 3 상단. 어느 기간을 보고 있는지 늘 밝힌다.
 struct StatisticsHeader: View {
     let periodText: String
-    let total: Decimal
+    let basisText: String
     let onPrevious: () -> Void
     let onNext: () -> Void
 
     var body: some View {
-        VStack(alignment: .center, spacing: AppSpacing.xs) {
-            HStack(spacing: AppSpacing.sm) {
-                stepButton(systemImage: "chevron.left", label: "이전 주기", action: onPrevious)
-                Spacer()
+        HStack(spacing: AppSpacing.sm) {
+            stepButton(systemImage: "chevron.left", label: "이전 주기", action: onPrevious)
+            Spacer()
+            VStack(spacing: 2) {
                 Text(periodText)
-                    .font(AppFont.screenTitle)
+                    .font(AppFont.periodTitle)
                     .foregroundStyle(AppColor.textPrimary)
-                Spacer()
-                stepButton(systemImage: "chevron.right", label: "다음 주기", action: onNext)
+                Text(basisText)
+                    .font(AppFont.overline)
+                    .tracking(0.3)
+                    .foregroundStyle(AppColor.textFaint)
             }
-            Text(AmountFormatter.full(total))
-                .font(AppFont.amountLarge)
-                .foregroundStyle(AppColor.textPrimary)
+            Spacer()
+            stepButton(systemImage: "chevron.right", label: "다음 주기", action: onNext)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, AppSpacing.screenMargin)
-        .padding(.vertical, AppSpacing.lg)
-        .background(AppColor.surface)
+        .frame(height: 34)
+        .accessibilityElement(children: .contain)
     }
 
     private func stepButton(
@@ -34,9 +34,9 @@ struct StatisticsHeader: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(AppColor.textSecondary)
-                .frame(width: 32, height: 32)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(AppColor.textFaint)
+                .frame(width: 34, height: 34)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -45,5 +45,15 @@ struct StatisticsHeader: View {
 }
 
 #Preview {
-    StatisticsHeader(periodText: "7/25 – 8/24", total: 1_535_000, onPrevious: {}, onNext: {})
+    VStack {
+        StatisticsHeader(
+            periodText: "7/25 – 8/24",
+            basisText: "급여 주기 · 매월 25일",
+            onPrevious: {},
+            onNext: {}
+        )
+        Spacer()
+    }
+    .padding(.horizontal, AppSpacing.screenMargin)
+    .background(AppColor.background)
 }
